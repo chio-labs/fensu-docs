@@ -217,7 +217,7 @@ module may contain imports, import-only `TYPE_CHECKING` blocks, and any number o
 `@rule` functions; supporting logic belongs in the other roles.
 
 ```text
-scripts/fensu/rules/
+scripts/fensu_policy/rules/
 ├── client_ownership.py
 └── service_boundaries.py
 ```
@@ -232,7 +232,7 @@ Point configuration at your rules, and select them:
 
 ```toml
 tooling = ["scripts"]
-rule_paths = ["scripts/fensu/rules"]
+rule_paths = ["scripts/fensu_policy/rules"]
 rule_modules = ["company_architecture.rules"]
 select = ["FF", "X001"]
 ```
@@ -264,7 +264,7 @@ import pytest
 
 from fensu import RuleCase, RuleResult, evaluate_rule
 
-from scripts.fensu.rules.client_ownership import no_global_client
+from scripts.fensu_policy.rules.client_ownership import no_global_client
 
 
 @pytest.mark.parametrize(
@@ -347,7 +347,7 @@ Family: custom
 Severity: error
 Kind: custom
 Enabled by default: yes
-Source: scripts/fensu/rules/client_ownership.py
+Source: scripts/fensu_policy/rules/client_ownership.py
 Message: GLOBAL_CLIENT hides ownership
 Remediation: Move the value to the module that owns and produces it.
 ```
