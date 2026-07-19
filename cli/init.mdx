@@ -23,7 +23,7 @@ fensu init [--yes] [--root PATH ...] [--tests PATH ...] [--tooling PATH ...]
    `tasks` directories with Python files. If package metadata also names one of
    those conventional tooling directories, tooling classification wins so a path
    is never proposed in both scopes; an explicit `--root` overrides detection.
-2. **Enables the complete ruleset.** Every repository gets `select = ["SF"]`.
+2. **Enables the complete ruleset.** Every repository gets `select = ["FF"]`.
    An empty repository also gets a scaffolded `src/<name>/` package plus `tests/`.
 3. **Writes `fensu.toml`** and updates your `.gitignore` to cover Fensu's
    [cache directory](/cli/check#caching).
@@ -64,21 +64,21 @@ confirms before writing:
 
 --> Existing codebase - 1,204 Python files
 
-    Enabling the full Fensu ruleset: SF
+    Enabling the full Fensu ruleset: FF
     Wrote fensu.toml
 
 --> Measuring current drift
 
-    SFA  annotations   3,411
-    SFL  layers          212
-    SFH  hygiene         540
-    SFN  naming            2
-    SFR  roles           181
-    SFS  shape            77
-    SFT  tests            25
+    FFA  annotations   3,411
+    FFL  layers          212
+    FFH  hygiene         540
+    FFN  naming            2
+    FFR  roles           181
+    FFS  shape            77
+    FFT  tests            25
 
     Found 4,448 faults across 352 files against the starting ruleset.
-    See docs.fensu.com/adoption for rolling out gradually.
+    See docs.fensu.dev/adoption for rolling out gradually.
 
 --> Install agent skill files? [Y/n]
 
@@ -89,7 +89,7 @@ confirms before writing:
 --> Next
 
     fensu check            run anytime
-    fensu rule SFA001      inspect any code in the output
+    fensu rule FFA001      inspect any code in the output
 ```
 
 Answering `e` at the confirmation lets you edit the paths; `n` aborts without
@@ -129,7 +129,7 @@ The resulting project starts fully enforced from the first commit:
 --> Next
 
     fensu check            run anytime
-    fensu rule SFA001      inspect any code in the output
+    fensu rule FFA001      inspect any code in the output
 ```
 
 ## Gitignore handling

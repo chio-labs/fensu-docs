@@ -96,11 +96,11 @@ flat top level.
   built from the roles.
 
 A domain is one or the other, never both: mixing direct role content with named
-subdomains is a fault (`SFR306`). A cohesive single-purpose domain is simply a
+subdomains is a fault (`FFR306`). A cohesive single-purpose domain is simply a
 leaf; it splits into named subdomains only when it grows genuinely independent
 parts. There is no mandatory subdomain level and no conventional `core/`
 ceremony. Loose non-role modules directly at the domain level fault too
-(`SFR307`).
+(`FFR307`).
 
 ```text
 src/my_package/
@@ -136,7 +136,7 @@ harder, not to create a junk drawer.
 ### Shared domain prefixes
 
 When sibling domains repeatedly start with the same first underscore-separated
-token, that token is already acting like an owner. SFR308 asks you to make the
+token, that token is already acting like an owner. FFR308 asks you to make the
 ownership explicit:
 
 <CodeGroup>
@@ -172,12 +172,12 @@ without Python files do not count.
 - **Grouped**: every module is grouped into one level of concern subfolders
   (**buckets**), each bucket holding modules up to the same cap.
 
-Mixing the two shapes in one container is a fault (`SFR301` for `_helpers/`,
-`SFR302` for `main/`): once one bucket exists, direct modules may not sit beside
+Mixing the two shapes in one container is a fault (`FFR301` for `_helpers/`,
+`FFR302` for `main/`): once one bucket exists, direct modules may not sit beside
 it. Bucket nesting is capped by `max_role_depth` (default 1), so a bucket does not
 grow buckets of its own. Bucket names must name a concern: a role name (`main`,
 `helpers`, `classes`, ...) as a bucket name faults under the same layout rules,
-and generic names (`util`, `common`, `misc`, ...) fault under `SFR204`.
+and generic names (`util`, `common`, `misc`, ...) fault under `FFR204`.
 
 Grouping is pure navigation, not new ownership: a grouped `main/` or `_helpers/`
 tree still belongs to one owner, and modules inside it keep their role's rules.
@@ -187,7 +187,7 @@ module under `main/`, bucketed or not.
 ## Entry modules
 
 A module under a `main/` package (directly, or inside a bucket) is an **entry
-module**. Its shape rule (`SFR401`) constrains only the module's **top level**:
+module**. Its shape rule (`FFR401`) constrains only the module's **top level**:
 
 - exactly one **public** function (the entry point);
 - at most **two private** functions in that file;
@@ -248,7 +248,7 @@ all overridable in configuration:
 | `max_main_container_modules` | 20 | Entry modules in a `main/` container: the flat package, or each bucket. |
 | `max_role_depth` | 1 | Bucket nesting depth inside a grouped `main/` or `_helpers/` package. |
 | `max_script_entrypoint_lines` | 80 | Lines in a direct tooling script entrypoint. |
-| `min_shared_domain_prefix_packages` | 2 | Sibling domains sharing a first-token owner prefix before SFR308 faults. `0` disables it. |
+| `min_shared_domain_prefix_packages` | 2 | Sibling domains sharing a first-token owner prefix before FFR308 faults. `0` disables it. |
 | `min_custom_rule_test_cases` | 1 | Statically visible harness cases required per configured custom rule. `0` disables it. |
 
 These are measured values from a large, real, self-hosted codebase, presented as
@@ -319,7 +319,7 @@ class LoadConfigCase:
 ```
 
 Case dataclasses live in a sibling `_test_types.py`, and reusable test helpers live
-in a local `helpers.py`. See [SFT: Tests](/concepts/rule-families#sft-tests) for the
+in a local `helpers.py`. See [FFT: Tests](/concepts/rule-families#fft-tests) for the
 rules that enforce this layout.
 
 ## Related

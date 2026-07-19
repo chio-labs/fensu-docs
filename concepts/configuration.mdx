@@ -31,7 +31,7 @@ same keys live under `[tool.fensu]`:
 roots = ["src/my_package"]
 tests = ["tests"]
 tooling = ["scripts"]
-select = ["SF"]
+select = ["FF"]
 
 [thresholds]
 max_positional_args = 1
@@ -42,7 +42,7 @@ max_positional_args = 1
 roots = ["src/my_package"]
 tests = ["tests"]
 tooling = ["scripts"]
-select = ["SF"]
+select = ["FF"]
 
 [tool.fensu.thresholds]
 max_positional_args = 1
@@ -88,7 +88,7 @@ silently dropped key is how a typo quietly disables a rule.
 | `roots` | list of strings | required | Product code scopes. No nesting. |
 | `tests` | list of strings | `["tests"]` | Test scopes. |
 | `tooling` | list of strings | `[]` | Dev tooling scopes. |
-| `select` | list of selectors | `["SF"]` | Blocking rules to enable. |
+| `select` | list of selectors | `["FF"]` | Blocking rules to enable. |
 | `warn` | list of selectors | `[]` | Advisory rules evaluated by `fensu check --warn`. |
 | `ignore` | list of selectors | `[]` | Rule codes to disable. |
 | `rule_paths` | list of strings | `[]` | Directories of custom rule files to load. |
@@ -110,22 +110,22 @@ prefix of a valid code works:
 
 | Selector | Matches |
 | --- | --- |
-| `SF` | Every core rule. |
-| `SFR` | One core family (here: roles). |
-| `SFR3` | One hundreds bucket (here: the `SFR3xx` layout rules). |
-| `SFR301` | Exactly one rule. |
+| `FF` | Every core rule. |
+| `FFR` | One core family (here: roles). |
+| `FFR3` | One hundreds bucket (here: the `FFR3xx` layout rules). |
+| `FFR301` | Exactly one rule. |
 | `X` | Every custom rule. |
 | `XDB` | A custom namespace (every rule whose code starts with `XDB`). |
 | `XDB001` | Exactly one custom rule. |
 
-The core family letters are `SFL`, `SFR`, `SFS`, `SFN`, `SFH`, `SFT`, and `SFA`;
+The core family letters are `FFL`, `FFR`, `FFS`, `FFN`, `FFH`, `FFT`, and `FFA`;
 see [Rule families](/concepts/rule-families). Custom selectors follow custom
 codes: `X` plus optional uppercase letters plus optional digits, so namespaces
 nest by prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)).
 
 ### The default
 
-`select` defaults to `["SF"]`, which turns on every family. If you want all of
+`select` defaults to `["FF"]`, which turns on every family. If you want all of
 Fensu's opinion, set nothing: the default already does it.
 
 ### Run only some families
@@ -134,7 +134,7 @@ Set `select` to the families you want. This replaces the default, so anything no
 listed is off:
 
 ```toml
-select = ["SFL", "SFR", "SFS", "SFN"]   # architecture only: no hygiene, tests, or annotations
+select = ["FFL", "FFR", "FFS", "FFN"]   # architecture only: no hygiene, tests, or annotations
 ```
 
 ### Run only specific rules
@@ -142,7 +142,7 @@ select = ["SFL", "SFR", "SFS", "SFN"]   # architecture only: no hygiene, tests, 
 List individual codes to run a hand-picked set and nothing else:
 
 ```toml
-select = ["SFL001", "SFL101", "SFS120"]
+select = ["FFL001", "FFL101", "FFS120"]
 ```
 
 ### Turn individual rules off
@@ -151,8 +151,8 @@ Keep the broad `select` and remove the few you do not want with `ignore`. `ignor
 always wins over `select`:
 
 ```toml
-select = ["SF"]          # everything...
-ignore = ["SFH007", "SFA103"]   # ...except these two
+select = ["FF"]          # everything...
+ignore = ["FFH007", "FFA103"]   # ...except these two
 ```
 
 ### The warn tier
@@ -162,12 +162,12 @@ ignore = ["SFH007", "SFA103"]   # ...except these two
 affect the exit code:
 
 ```toml
-select = ["SFL", "SFR", "SFS", "SFN", "SFH", "SFT"]
-warn = ["SFA"]
+select = ["FFL", "FFR", "FFS", "FFN", "FFH", "FFT"]
+warn = ["FFA"]
 ```
 
 A rule cannot resolve into both `select` and `warn`, or both `warn` and `ignore`.
-Fensu compares resolved rule codes, so `select = ["SF"]` with `warn = ["SFA"]` is
+Fensu compares resolved rule codes, so `select = ["FF"]` with `warn = ["FFA"]` is
 rejected as an overlap.
 
 ### How it composes
@@ -178,7 +178,7 @@ rejected as an overlap.
 - A rule in `warn` is separate from the blocking set and runs only with `--warn`.
 - Selecting a family does **not** pull in that family's opt-in (default-off) rules.
   Only naming such a rule by its exact code turns it on (for example
-  `select = ["SF", "SFS102"]`).
+  `select = ["FF", "FFS102"]`).
 
 ## Exact rule exceptions
 
@@ -188,7 +188,7 @@ external callback signature:
 
 ```toml
 [[rule_exceptions]]
-rule = "SFS120"
+rule = "FFS120"
 path = "src/my_package/integrations/_helpers/callbacks.py"
 symbols = ["ProgressCollector.update"]
 reason = "The external API invokes this callback positionally."
@@ -198,7 +198,7 @@ Omit `symbols` only for an ownerless file-level finding:
 
 ```toml
 [[rule_exceptions]]
-rule = "SFR307"
+rule = "FFR307"
 path = "src/my_package/integrations/compatibility.py"
 reason = "This file remains a direct module while the external integration is supported."
 ```
@@ -340,10 +340,10 @@ by the naming family:
 
 | Behavior | Rule | Requirement |
 | --- | --- | --- |
-| `no-return` | `SFN001` | Do not return a meaningful value. |
-| `returns-bool` | `SFN002` | Declare `bool`, `TypeGuard`, or `TypeIs`. |
-| `returns-value` | `SFN003` | Do not explicitly declare a no-value result such as `None`. |
-| `returns-iterator` | `SFN004` | Contain an owned `yield` or declare an iterator or generator result. |
+| `no-return` | `FFN001` | Do not return a meaningful value. |
+| `returns-bool` | `FFN002` | Declare `bool`, `TypeGuard`, or `TypeIs`. |
+| `returns-value` | `FFN003` | Do not explicitly declare a no-value result such as `None`. |
+| `returns-iterator` | `FFN004` | Contain an owned `yield` or declare an iterator or generator result. |
 
 Fensu ships these contracts by default:
 
@@ -383,7 +383,7 @@ behavior outside these four categories, write a [custom rule](/concepts/custom-r
 tooling = ["scripts"]
 rule_paths = ["scripts/fensu/rules"]
 rule_modules = ["company_architecture.rules"]
-select = ["SF", "XAC001"]
+select = ["FF", "XAC001"]
 ```
 
 - `rule_paths` entries are directories (or files) of `.py` modules containing
@@ -440,7 +440,7 @@ Fensu checks itself with this configuration:
 roots = ["src/fensu"]
 tests = ["tests"]
 tooling = ["scripts"]
-select = ["SF"]
+select = ["FF"]
 
 [thresholds]
 max_positional_args = 1

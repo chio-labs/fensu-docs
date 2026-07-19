@@ -121,7 +121,7 @@ def rule(
 
 A custom code is `X`, plus zero or more uppercase letters, plus one or more
 digits: `X001`, `XAC001`, `XDB042`. The namespace is validated when the decorator
-runs; a custom code that starts with `SF` is rejected at load, so a project can
+runs; a custom code that starts with `FF` is rejected at load, so a project can
 never silently redefine what a core rule means.
 
 The letters between `X` and the digits are yours to carve into namespaces. A team
@@ -178,7 +178,7 @@ is `max_statements`, and so on). It exists so a rule asks for a limit by name
 rather than by string: `ctx.threshold(name=Threshold.MAX_STATEMENTS)` returns the
 value applicable to the current file, with any global, per-role, or per-path
 override already applied. There is no string-keyed form, for the same reason
-`SFH007` exists.
+`FFH007` exists.
 
 ## The rule context
 
@@ -222,8 +222,8 @@ scripts/fensu/rules/
 └── service_boundaries.py
 ```
 
-Name modules after the policy they implement. SFR706 rejects filenames that are
-exactly a core or custom rule code, such as `sft104.py` or `xac001.py`, because a
+Name modules after the policy they implement. FFR706 rejects filenames that are
+exactly a core or custom rule code, such as `fft104.py` or `xac001.py`, because a
 descriptive name remains useful when policies grow or codes change.
 
 ## Loading rules
@@ -234,7 +234,7 @@ Point configuration at your rules, and select them:
 tooling = ["scripts"]
 rule_paths = ["scripts/fensu/rules"]
 rule_modules = ["company_architecture.rules"]
-select = ["SF", "X001"]
+select = ["FF", "X001"]
 ```
 
 - `rule_paths` are directories (or files) of `.py` modules. Each file is loaded
@@ -296,7 +296,7 @@ you. `RuleCase` accepts `path`, `scope` (`root`, `test`, or `tooling`),
 `RuleFile` entries are discovered as project context but are not direct evaluation
 targets. `RuleResult` exposes `faults`, `dependencies`, and `fault_count`.
 
-SFR707 requires each configured custom rule to have at least
+FFR707 requires each configured custom rule to have at least
 `min_custom_rule_test_cases` statically visible `RuleCase` instances (default `1`,
 `0` disables it). Keep cases in a visible `pytest.mark.parametrize` list calling
 `evaluate_rule(rule=<decorated function>, test_case=...)`; dynamic factories and
