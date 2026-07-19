@@ -1,0 +1,97 @@
+---
+title: Adopting Fensu
+description: "How to roll Fensu out on a new repo, a small existing repo, or a large existing one."
+---
+
+Fensu's defaults describe a coherent target architecture. How you turn them on
+depends on where you are starting. The first two situations below are where Fensu
+pays off fastest; the third needs more judgment.
+
+## New repositories
+
+The defaults are calibrated for a fresh repo. Turn everything on from the first
+commit: there is very little to fix, because there is little code yet, and the rules
+keep the structure intact as it grows.
+
+```bash
+fensu init
+```
+
+[`fensu init`](/cli/init) scaffolds a `src/` package, a `tests/` directory, and a
+`fensu.toml` with the full ruleset selected. This is where Fensu is easiest to
+live with, because you never accumulate drift in the first place.
+
+## Small existing repositories
+
+This is the strongest first experience. Whether the repo is tidy or a little
+inconsistent, if it is small enough that reaching zero faults is realistic, adoption
+is mostly a single pass that leaves it on a coherent architecture.
+
+1. **Initialize** in the directory that holds your `pyproject.toml`:
+
+   ```bash
+   fensu init
+   ```
+
+2. **See the drift:**
+
+   ```bash
+   fensu check
+   ```
+
+3. **Drive the faults to zero.** Hand the output to a coding agent and let it work
+   through them, since each diagnostic already states the contract and the fix:
+
+   ```text
+   Run `fensu check` and fix every fault. If a fault looks like it needs a
+   real design decision, leave it and list it for me instead of forcing a change.
+   ```
+
+   Most faults are local, mechanical corrections. The few that would require a
+   genuine structural decision are worth pausing on rather than rushing.
+
+4. **Defer the handful you want to think about.** Record them as explicit
+   [rule exceptions](/concepts/configuration#exact-rule-exceptions) or `ignore`
+   entries so the run is green and the deferral is visible, then come back to them
+   deliberately.
+
+The result is a repo that conforms to a coherent architecture and stays that way,
+for very little up-front effort.
+
+## Large existing repositories
+
+Pointing the full default set at a large, established codebase surfaces a lot at
+once. That is real drift against the target architecture, not the tool
+overreacting. But a big-bang refactor to zero faults is usually the wrong response,
+and it is rarely safe.
+
+Here the goal is not to bend the codebase to Fensu's defaults. It is to encode the
+architecture you actually have and want.
+
+<Warning>
+  Enforce as aggressively as you can refactor safely, and no more. If your test
+  suite would not catch a bad structural move, do not let the linter pressure you
+  into one.
+</Warning>
+
+**Custom rules are the main lever.** Where a default rule does not fit how part of
+the repo is legitimately built, do not twist the code to pass it. Write a
+[custom rule](/concepts/custom-rules) that states the invariant you genuinely care
+about. You capture real architectural intent as an executable check instead of
+paying for a disruptive migration, and the rule flows into your generated
+[agent guidance](/cli/skills) like any core rule.
+
+Supporting configuration keeps everything else visible while you decide:
+
+- [`ignore`](/concepts/configuration#selection) for a default that is wrong for
+  this repo globally.
+- [`warn`](/concepts/configuration#the-warn-tier) for a policy you want measured
+  but not blocking yet.
+- [`rule_exceptions`](/concepts/configuration#exact-rule-exceptions) for isolated,
+  justified findings.
+- [Evaluation targeting](/concepts/configuration#evaluation-targeting) to enforce
+  the regions you trust while keeping the rest as project context.
+
+Every deviation lives in [configuration](/concepts/configuration) or a custom rule,
+where a reviewer can see it, rather than scattered through the source. See
+[Philosophy](/philosophy) for why that matters.

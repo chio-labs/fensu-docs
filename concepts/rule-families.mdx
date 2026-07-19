@@ -1,0 +1,243 @@
+---
+title: Rule Families
+description: "The seven core rule families Fensu ships, what each enforces, and how rule codes are structured."
+---
+
+Every Fensu rule belongs to a **family**. A family groups rules by subject, gives
+you a single selector to turn the whole group on or off, and carries a letter in
+each rule's code. Fensu ships seven core families and reserves the `X` namespace
+for [custom rules](/concepts/custom-rules).
+
+## Rule codes
+
+A core rule code is `SF` + a family letter + exactly three digits, for example
+`SFL001` or `SFS131`.
+
+- `SF` marks a structural fault and is collision-free with other linters' prefixes.
+- The third letter is the family.
+- The number is a stable address within the family. The hundreds digit groups a
+  sub-theme (for example `SFS0xx` are size caps, `SFS1xx` are dataflow), and the
+  rule's **slug** carries the precise meaning.
+
+Because codes are structured, any prefix is a valid
+[selector](/concepts/configuration#selection): `SF` matches every core rule, `SFS`
+a family, `SFS1` a hundreds bucket, `SFS120` one rule.
+
+Codes are permanent. A removed or renamed rule's code is retired forever and never
+reused, and existing rules are never renumbered. Custom rules must use the `X`
+namespace (`X` + optional uppercase letters + digits, like `XDB001`) and are
+rejected at load if they start with `SF`. See
+[Custom rules](/concepts/custom-rules#codes-and-namespaces) for how teams carve
+`X` sub-namespaces.
+
+## The families
+
+| Selector | Family | Subject |
+| --- | --- | --- |
+| `SFL` | Layers | Imports, boundaries, dependency direction. |
+| `SFR` | Roles | Module taxonomy: what a file may contain and where it lives. |
+| `SFS` | Shape | Function size caps and dataflow discipline. |
+| `SFN` | Naming | Name-to-behavior contracts. |
+| `SFH` | Hygiene | Clarity and smell: docstrings, comments, raises, decision literals. |
+| `SFT` | Tests | Test-suite layout, naming, and parametrization conventions. |
+| `SFA` | Annotations | Type-annotation completeness. |
+
+Which families apply depends on the file's [scope](/concepts/architecture-model#scopes):
+product roots and tooling get the structural families (SFL, SFR, SFS, SFN, SFH,
+SFA), while the tests scope gets SFT and SFA.
+
+## SFL: Layers
+
+Layers rules govern which modules and packages may import which, so boundaries stay
+intact. This is the family most directly aimed at keeping a codebase from tangling.
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFL001` | absolute-imports-only | Relative imports hide package boundaries. |
+| `SFL002` | no-star-imports | Star imports hide names from boundary analysis. |
+| `SFL101` | no-sibling-package-internals | Do not reach into a sibling owner's internals; import its published surface. |
+| `SFL102` | no-cross-package-internals | Import only via a package's public surface. |
+| `SFL103` | no-internal-public-surface-imports | Internal code imports concrete owning modules, not the bare package surface. |
+| `SFL110` | no-cross-file-use-of-helper-private-class | A `_`-prefixed class in `_helpers/` is file-only; shared classes move to `classes/`. |
+| `SFL301` | no-runtime-imports-from-tooling | Runtime code must not import from the tooling scope. |
+
+For `SFL101` and `SFL102`, ownership is **role-boundary-relative**: a module's
+owner is everything before its first role segment. Imports within one owner are
+free (`main/` to its own `_helpers/`, between modules of one `_helpers/` tree
+including its buckets, into the owner's `classes/`). Imports across owners must
+enter through the owner's public surface: its role files or role packages
+(`models`, `types`, `constants`, `exceptions`, `classes`) or its `main/` entry
+modules. Another owner's `_helpers/` internals always fault. If an importable path
+has no role segment, Fensu infers its containing package as the owner (or the
+package itself for an `__init__.py`); a direct non-role module is internal, not a
+public surface.
+
+## SFR: Roles
+
+The largest family, and the clearest separation from tools that only look at the
+import graph: SFR looks *inside* modules. It enforces what each role file may
+contain, where declarations may live, package layout, entry-module shape, and file
+size.
+
+Representative rules:
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFR001` | models-only-models | `models.py` holds only model declarations. |
+| `SFR101` | model-declaration-outside-models | A model declared outside `models.py`. |
+| `SFR204` | banned-generic-package-name | No `shared`, `common`, `util`, `misc`, and similar package names at any depth. |
+| `SFR301` | helpers-package-layout | `_helpers/` is flat or fully grouped into bounded buckets, never mixed. See [containers](/concepts/architecture-model#containers-flat-or-grouped). |
+| `SFR306` | top-level-domain-shape | A domain is a role leaf or a branch of named subdomains, never both. See [leaf or branch](/concepts/architecture-model#domains-leaf-or-branch). |
+| `SFR308` | shared-domain-prefix | Repeated first-token domain prefixes become an owning branch domain. See [shared prefixes](/concepts/architecture-model#shared-domain-prefixes). |
+| `SFR401` | entry-module-shape | An entry file defines one public function and at most two private ones (a limit on functions in the file, not on what they may call). See [entry modules](/concepts/architecture-model#entry-modules). |
+| `SFR402` | init-module-empty | `__init__.py` is docstring-only. |
+| `SFR501` | classes-one-class-per-module | One class per module in `classes/`. |
+| `SFR601` | source-file-line-count | A file must not exceed the line-count threshold. |
+| `SFR701` | tooling-entrypoint-shape | A direct tooling script is a thin command adapter. |
+| `SFR704` | rules-role-content | A `rules/` module holds only imports and `@rule` functions. |
+| `SFR706` | descriptive-rule-module-names | Rule modules use policy names, not filenames such as `sft104.py` or `xac001.py`. |
+| `SFR707` | custom-rule-test-coverage | Every configured custom rule has statically visible public-harness cases. |
+
+SFR spans role-file content (`SFR0xx`), misplaced declarations (`SFR1xx`), naming
+(`SFR2xx`), package layout (`SFR3xx`), surface shape (`SFR4xx`), class and helper
+shape (`SFR5xx`), file size (`SFR6xx`), and tooling layout (`SFR7xx`).
+
+## SFS: Shape
+
+Shape rules keep functions small and their dataflow explicit. Several of them
+target the way generated code tends to sprawl.
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFS001` | too-many-statements | Statement cap on `main/` orchestrator functions. |
+| `SFS002` | too-many-distinct-calls | Distinct-callee cap on `main/` functions. |
+| `SFS003` | too-many-locals | Assigned-local cap on `main/` functions. |
+| `SFS010` | max-arguments | Global argument-count cap on any function. |
+| `SFS011` | max-statements-global | Loose global statement floor on any function. |
+| `SFS101` | meaningful-project-result-discarded | A meaningful returned value must be used, not silently dropped. |
+| `SFS110` | default-mutation-return | A function that mutates a parameter must return it. |
+| `SFS120` | keyword-only-arguments | Parameters past the positional threshold must be keyword-only. |
+| `SFS130` | no-outer-state-mutation | No rebinding or mutation of module globals or closure captures. |
+| `SFS131` | no-complex-comprehensions | One generator per comprehension, no nested comprehension. |
+| `SFS201` | mutable-result-model | `models.py` dataclasses must be `frozen=True`. |
+
+`SFS102` (parameter-mutation-in-phase-helpers) is the one core rule that is **opt-in**:
+it ships disabled and runs only when named explicitly by code. It is the stricter
+input-immutability stance for teams adopting the full phase model, layered on top
+of the default `SFS110`.
+
+## SFN: Naming
+
+Naming rules enforce that a name means what it claims. This is the "dishonest
+functions" family.
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFN001` | validator-must-not-return | `validate_*` and `enforce_*` functions must not return a meaningful value. |
+| `SFN002` | predicate-must-return-bool | `is_*`, `has_*`, `can_*`, and `supports_*` functions must declare `bool`, `TypeGuard`, or `TypeIs`. |
+| `SFN003` | value-name-must-return-value | `get_*`, `to_*`, and `as_*` functions must not declare a no-value return such as `None`. |
+| `SFN004` | iterator-name-must-produce-iterator | `iter_*` functions must contain an owned `yield` or declare an iterator or generator return. |
+
+Each diagnostic offers two safe directions: honor the name or preserve the
+behavior and rename it. For example, an eager `iter_items() -> list[Item]` can
+return an iterator or become `collect_items`.
+
+The shipped patterns and behaviors are configured through
+[`contracts`](/concepts/configuration#contracts), where projects can add their own
+name globs without changing these rule codes.
+
+## SFH: Hygiene
+
+Hygiene rules target clarity and smells that hide meaning.
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFH001` | single-line-docstrings | Docstrings are a single line. |
+| `SFH002` | no-standalone-comments | No standalone comments the tooling would depend on. |
+| `SFH003` | no-raw-builtin-raise | Raise structured errors, not bare built-ins. |
+| `SFH004` | no-assert-in-runtime | No `assert` in runtime code. |
+| `SFH005` | no-swallowed-exception-probe | No `except` that silently swallows. |
+| `SFH006` | no-complex-comprehensions-in-tooling | The comprehension readability limit, in tooling. |
+| `SFH007` | no-unnamed-string-decisions | String literals must not directly control comparisons. |
+| `SFH008` | no-magic-numeric-comparisons | Numeric literals other than `-1`, `0`, `1` must not control comparisons. |
+| `SFH009` | no-import-time-side-effects | No standalone calls executed at import time. |
+
+`SFH007` and `SFH008` push decisions to compare against named concepts (enum
+members or named constants) instead of unexplained literals. They report the
+literal expression and do not infer runtime values. `SFH009` was previously
+numbered `SFR206`; import-time discipline is hygiene, not module taxonomy.
+
+## SFT: Tests
+
+Test rules make a test suite readable and consistent. They apply only in the tests
+scope. The conventions include a mirrored layout, given-when-then naming, and
+dataclass-backed parametrization.
+
+Representative rules:
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFT001` | test-layout | Test directories mirror the source tree. |
+| `SFT104` | no-if-in-tests | Tests and local test helpers contain no conditional control flow. |
+| `SFT204` | local-test-types-file | Each test module has a sibling `_test_types.py`. |
+| `SFT301` | test-file-name | Test files start with `test_`. |
+| `SFT302` | test-function-name | `test_given_<state>_when_<action>_then_<expectation>`. |
+| `SFT401` | dataclass-parametrize | Tests use `@pytest.mark.parametrize` with a dataclass-backed case. |
+| `SFT414` | description-lambda-ids | Parametrize ids come from `lambda case: case.description`. |
+
+SFT groups layout and mirroring (`SFT0xx`), module hygiene (`SFT1xx`), test-role
+files (`SFT2xx`), test file and function naming (`SFT3xx`), and dataclass-backed
+parametrization (`SFT4xx`).
+
+SFT104 applies to every test function, not only parametrized tests, and to
+top-level functions, async functions, and classes in `helpers.py` and
+`_test_helpers.py`. It detects `if`, `match`, conditional expressions, and filtered
+simple comprehensions. It does not currently treat `while` or `try` as conditionals.
+Use parametrization when setup and assertions stay branch-free. Otherwise split the
+behavior into separate tests or helper functions.
+
+## SFA: Annotations
+
+Annotation rules require types to be explicit, so they are in the text the reader
+(and a type checker, and an LLM) can see. SFA runs over both the product and test
+scopes.
+
+| Code | Slug | Checks |
+| --- | --- | --- |
+| `SFA001` | parameter-annotation | Every function parameter is annotated. |
+| `SFA002` | return-annotation | Every function has a return annotation. |
+| `SFA101` | module-variable-annotation | Module-level variables are annotated. |
+| `SFA102` | class-attribute-annotation | Class attributes are annotated. |
+| `SFA103` | local-variable-annotation | Non-scalar local variables are annotated on first binding. |
+
+All five are on by default. `SFA103` exempts direct scalar literal bindings whose
+type is already explicit in the value, including strings, bytes, booleans, numeric
+literals, signed numeric literals, and f-strings:
+
+```python
+attempts = 3
+label = f"job-{job_id}"
+```
+
+Collections, constructor and function-call results, comprehensions, attribute
+reads, and other inferred values still require an annotation on first binding:
+
+```python
+items: list[Item] = load_items()
+by_id: dict[str, Item] = {item.id: item for item in items}
+```
+
+See [Philosophy](/philosophy#compensating-for-llm-blind-spots) for why explicit
+annotations remain the default for those less obvious values.
+
+## Inspecting rules
+
+Look up any rule's full metadata, including its message and remediation, with
+[`fensu rule`](/cli/rule):
+
+```bash
+fensu rule SFS131
+```
+
+Generate agent-facing guidance from your active rules with
+[`fensu skills`](/cli/skills).
