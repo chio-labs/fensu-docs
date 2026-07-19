@@ -92,9 +92,9 @@ Because Fensu enforces the structure, it can also render it meaningfully.
   <img className="hidden dark:block" src="/fensu_map_example.png" alt="A fensu map call tree for run_map, showing resolved project calls with path and line locations, an unresolved parameter call, depth-limit markers, and a cycle marker." />
 </Frame>
 
-The map is useful precisely because it is not guessing at an arbitrary repo. Check
-enforces layers, roles, and public surfaces first; map then renders the structure
-the code is required to expose. Useful lineage requires declared structure.
+`fensu map` works on any Python repository and does not require Fensu configuration.
+It resolves calls it can prove and marks dynamic seams as unresolved rather than
+guessing.
 
 ## Keeping agents on the rails
 
