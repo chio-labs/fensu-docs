@@ -1,0 +1,201 @@
+---
+title: fensu init
+description: "Guided setup: detect your repository layout, write a starting configuration, measure current drift, and install agent skill files."
+---
+
+`fensu init` sets up Fensu in a repository. It detects your layout, writes a
+`fensu.toml` with the complete default ruleset, runs an initial check to show the
+current drift, and offers to install [agent skill files](/cli/skills).
+It never guesses silently: every detected path shows where it came from, and
+nothing is written until you confirm (or pass `--yes`).
+
+```bash
+fensu init [--yes] [--root PATH ...] [--tests PATH ...] [--tooling PATH ...]
+            [--skills | --no-skills] [--name NAME]
+```
+
+## What it does
+
+1. **Detects your layout.** Package roots come from `pyproject.toml` metadata
+   (hatch, setuptools, poetry, flit, uv workspaces, the project name), ruff's
+   `src` setting, and a directory scan. Test paths come from pytest `testpaths`
+   and `tests`/`test` directories; tooling from `scripts`, `tools`, `bin`, and
+   `tasks` directories with Python files. If package metadata also names one of
+   those conventional tooling directories, tooling classification wins so a path
+   is never proposed in both scopes; an explicit `--root` overrides detection.
+2. **Enables the complete ruleset.** Every repository gets `select = ["SF"]`.
+   An empty repository also gets a scaffolded `src/<name>/` package plus `tests/`.
+3. **Writes `fensu.toml`** and updates your `.gitignore` to cover Fensu's
+   [cache directory](/cli/check#caching).
+4. **Measures current drift** by running the starting ruleset once and printing
+   per-family fault counts.
+5. **Installs project-specific agent skill files** (`.claude/`, `.opencode/`,
+   `.agents/`) at the Git root unless you decline; see
+   [`fensu skills`](/cli/skills).
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `--yes` | Accept every detected choice; required when no terminal is attached. |
+| `--root PATH` | Use these package roots instead of the detected ones. Repeatable. |
+| `--tests PATH` | Use these test paths. Repeatable. |
+| `--tooling PATH` | Use these tooling paths. Repeatable. |
+| `--skills` / `--no-skills` | Install or skip agent skill files without prompting. |
+| `--name NAME` | Package name for an empty-repository scaffold. Only valid when no Python package is detected. |
+
+`--skills` and `--no-skills` are mutually exclusive. `--root`, `--tests`, and
+`--tooling` only apply when a codebase is detected; `--name` only applies when
+none is.
+
+## An existing repository
+
+On a repository with code, `fensu init` shows what it detected and why, then
+confirms before writing:
+
+```text
+--> Detecting project layout
+
+    roots    src/acme      pyproject: hatch packages
+    tests    tests/        directory scan
+    tooling  none detected
+
+    Accept? [Y/n/e] e = edit paths
+
+--> Existing codebase - 1,204 Python files
+
+    Enabling the full Fensu ruleset: SF
+    Wrote fensu.toml
+
+--> Measuring current drift
+
+    SFA  annotations   3,411
+    SFL  layers          212
+    SFH  hygiene         540
+    SFN  naming            2
+    SFR  roles           181
+    SFS  shape            77
+    SFT  tests            25
+
+    Found 4,448 faults across 352 files against the starting ruleset.
+    See docs.fensu.com/adoption for rolling out gradually.
+
+--> Install agent skill files? [Y/n]
+
+    Updated .opencode/skills/fensu-acme/SKILL.md
+    Updated .claude/skills/fensu-acme/SKILL.md
+    Updated .agents/skills/fensu-acme/SKILL.md
+
+--> Next
+
+    fensu check            run anytime
+    fensu rule SFA001      inspect any code in the output
+```
+
+Answering `e` at the confirmation lets you edit the paths; `n` aborts without
+writing anything. When several package roots are detected, you pick which to
+include by number.
+
+No rule family is silently held back. For an existing repository, keep the target
+visible and roll it out with evaluation targeting or explicit rule exceptions; see
+[Adopting Fensu](/adoption).
+
+## An empty repository
+
+With no Python code detected, `fensu init` scaffolds a fresh layout instead. In an
+interactive terminal it asks for a package name and offers the directory name as a
+default. Non-interactive `--yes` cannot confirm that derived name, so it requires
+`--name`:
+
+```bash
+fensu init --yes --name Sample-App --no-skills
+```
+
+The resulting project starts fully enforced from the first commit:
+
+```text
+--> Empty repository
+
+    Created src/sample_app/__init__.py
+    Created tests/
+    Wrote fensu.toml
+
+--> Found 0 faults
+
+--> Agent skill files - no
+
+    Run fensu skills when you are ready.
+
+--> Next
+
+    fensu check            run anytime
+    fensu rule SFA001      inspect any code in the output
+```
+
+## Gitignore handling
+
+Fensu's generated result cache lives under `.fensu/cache/`, which should not be
+committed. The rest of the `.fensu/` namespace is not ignored automatically.
+
+- If a root `.gitignore` exists and does not already cover the cache path,
+  `fensu init` appends a `.fensu/cache/` entry to it.
+- An empty repository with no `.gitignore` gets one created from the standard
+  GitHub Python template, plus the `.fensu/cache/` entry.
+- An existing repository with no `.gitignore` gets one containing just the
+  `.fensu/cache/` entry.
+
+## Rerunning is safe
+
+If the directory already has a `fensu.toml` or a `[tool.fensu]` table,
+`fensu init` changes nothing and exits `0`:
+
+```text
+Fensu configuration already exists: /path/to/repo/fensu.toml (nothing to do)
+```
+
+If a **parent** directory's configuration would apply here instead, init refuses
+with an error rather than shadowing it. Configuration and scaffold writes are
+transactional. Drift measurement and skill installation happen afterward. If skill
+installation fails, the initialized project is kept and the error is reported so
+you can rerun `fensu skills`.
+
+## Non-interactive use
+
+Prompts require a terminal. In CI or scripts, pass `--yes` (or make every choice
+explicit with flags); otherwise init fails:
+
+```text
+Interactive initialization requires a TTY; use --yes or explicit options.
+```
+
+```bash
+# Existing repository
+fensu init --yes --no-skills
+
+# Empty repository
+fensu init --yes --name my_package --no-skills
+```
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Configuration written, or a local configuration already exists. |
+| `2` | Detection, validation, or write failure; declined confirmation; missing TTY. |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    The manual version of what init automates.
+  </Card>
+  <Card title="Adopting Fensu" icon="seedling" href="/adoption">
+    Rolling out full enforcement with explicit boundaries and exceptions.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Every key in the file init writes.
+  </Card>
+  <Card title="fensu skills" icon="robot" href="/cli/skills">
+    The agent guidance init offers to install.
+  </Card>
+</CardGroup>

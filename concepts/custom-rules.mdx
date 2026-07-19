@@ -1,0 +1,357 @@
+---
+title: Custom Rules
+description: "Author repository-specific architecture rules in Python using Fensu's public analysis API."
+---
+
+Fensu's defaults describe a coherent architecture, but every serious repository
+eventually develops contracts specific to its own domain. Custom rules turn those
+contracts into executable checks that Fensu enforces consistently.
+
+<Info>
+  **Agent-assisted authoring is recommended.** Describe the architectural contract,
+  provide passing and failing examples, and ask a coding agent to implement and
+  test the rule. The result is ordinary Python that your team reviews and Fensu
+  executes like any other rule.
+</Info>
+
+## Agent-assisted authoring
+
+Repository-specific static analysis traditionally required enough specialized work
+that architectural knowledge stayed trapped in documentation and code review. A
+coding agent can inspect the repository, implement a rule against Fensu's public
+analysis API, add boundary tests, and iterate. The agent implements the policy; it
+does not invent it. Your team still defines the contract, reviews the rule and its
+edge cases, and decides which false positives are acceptable.
+
+## Give the agent the contract
+
+Start with examples rather than an implementation strategy. Give the agent enough
+context to inspect existing patterns and enough boundaries to distinguish the
+contract from nearby valid code:
+
+```text
+Add a custom Fensu rule that flags a module-level variable named GLOBAL_CLIENT
+and references to it. The text "GLOBAL_CLIENT" inside a string and unrelated local
+variables should not fault. Add tests and run the rule against the repository.
+```
+
+That is enough to begin. Run the rule, inspect its faults, and refine the passing and
+failing examples until it captures the intended boundary. Then review the contract
+and tests more closely than the traversal mechanics: confirm that faults identify
+the right syntax, legitimate near-misses pass, project access goes through
+`ctx.project`, and diagnostics are deterministic.
+
+## The shape of a rule
+
+A custom rule is a function decorated with `@rule`. The decorator carries a
+mandatory metadata **envelope**; the function **body** is unconstrained.
+
+```python
+from __future__ import annotations
+
+import ast
+
+from fensu import Family, Fault, RuleContext, rule
+
+
+@rule(
+    code="X001",
+    family=Family.CUSTOM,
+    slug="no-global-client",
+    message="GLOBAL_CLIENT hides ownership",
+    remediation="Move the value to the module that owns and produces it.",
+)
+def no_global_client(*, module: ast.Module, ctx: RuleContext) -> list[Fault]:
+    return [
+        ctx.fault(node=node)
+        for node in ctx.nodes(ast.Name)
+        if isinstance(node, ast.Name) and node.id == "GLOBAL_CLIENT"
+    ]
+```
+
+The idea is to **constrain the envelope and free the body**. You cannot create a
+rule without its identity and message, but inside the check you can write any
+Python you like.
+
+## The public API
+
+Import rule-authoring names from the top-level package:
+
+```python
+from fensu import rule, Fault, Family, Severity, Threshold, RuleContext
+```
+
+Anything not exported is internal and may change.
+
+The top-level package also exports public analysis protocols and stable location,
+handle, dependency, and fact models. Import a named public type from `fensu` when
+a custom rule needs it; do not import from `fensu.analysis` or another internal
+module.
+
+The top-level package also exports `RuleCase`, `RuleFile`, `RuleResult`, and
+`evaluate_rule` for [testing custom rules](#testing-rules) through the ordinary
+discovery and evaluation pipeline.
+
+### The `@rule` decorator
+
+```python
+def rule(
+    *,
+    code: str,
+    family: Family | str,
+    slug: str,
+    message: str,
+    remediation: str | None = None,
+    severity: Severity = Severity.ERROR,
+    enabled_by_default: bool = True,
+) -> Callable[[RuleCheck], RuleCheck]: ...
+```
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `code` | yes | The rule's permanent identifier. See [codes and namespaces](#codes-and-namespaces). |
+| `family` | yes | A `Family` member; use `Family.CUSTOM` for project rules. |
+| `slug` | yes | A short kebab-case name. |
+| `message` | yes | The one-sentence statement of the violated contract. |
+| `remediation` | no | The normal correction, shown as `= help:`. |
+| `severity` | no | `Severity.ERROR` (default) or `Severity.WARNING`. |
+| `enabled_by_default` | no | Set `False` for an opt-in rule that runs only when selected by code. |
+
+### Codes and namespaces
+
+A custom code is `X`, plus zero or more uppercase letters, plus one or more
+digits: `X001`, `XAC001`, `XDB042`. The namespace is validated when the decorator
+runs; a custom code that starts with `SF` is rejected at load, so a project can
+never silently redefine what a core rule means.
+
+The letters between `X` and the digits are yours to carve into namespaces. A team
+or plugin claims a prefix (`XDB*` for the database team, `XDJ*` for the Django
+conventions package), and because [selectors](/concepts/configuration#selection)
+are prefixes, namespaces nest: `X` selects every custom rule, `XD` everything
+under `XDB` and `XDJ`, `XDB` one namespace, `XDB001` one rule.
+
+### The check signature
+
+The signature is frozen. New capabilities arrive as new context methods, never as
+signature changes.
+
+```python
+def check(*, module: ast.Module, ctx: RuleContext) -> list[Fault]: ...
+```
+
+- `module` is the parsed `ast.Module` of the file being checked.
+- `ctx` is a [`RuleContext`](#the-rule-context).
+- The return value is a list of [`Fault`](#the-fault) objects.
+
+### The `Fault`
+
+A `Fault` is a frozen dataclass. You usually construct one through the context so
+line, column, and code are wired automatically, but the type is public so return
+types are nameable.
+
+```python
+@dataclass(frozen=True, slots=True)
+class Fault:
+    code: str
+    path: Path
+    message: str
+    line: int | None = None
+    column: int | None = None
+    remediation: str | None = None
+```
+
+### `Family`, `Severity`, and `Threshold`
+
+```python
+class Family(StrEnum):
+    LAYERS = "layers"; ROLES = "roles"; SHAPE = "shape"
+    NAMING = "naming"; HYGIENE = "hygiene"; TESTS = "tests"
+    ANNOTATIONS = "annotations"; CUSTOM = "custom"
+
+class Severity(StrEnum):
+    ERROR = "error"; WARNING = "warning"
+```
+
+`Threshold` names the configurable numeric limits, one member per key in the
+[`[thresholds]`](/concepts/configuration#thresholds) table (`Threshold.MAX_STATEMENTS`
+is `max_statements`, and so on). It exists so a rule asks for a limit by name
+rather than by string: `ctx.threshold(name=Threshold.MAX_STATEMENTS)` returns the
+value applicable to the current file, with any global, per-role, or per-path
+override already applied. There is no string-keyed form, for the same reason
+`SFH007` exists.
+
+## The rule context
+
+`RuleContext` is a convenience toolbox, not a cage. Its supported analysis surface
+is split into five public, backend-neutral zones. You may still ignore them and walk
+`module` yourself when a rule needs unrestricted Python AST access.
+
+```python
+functions = ctx.facts.functions()                  # current-file semantic facts
+analysis = ctx.project.analysis(                  # cross-file analysis
+    requester=ctx.path,
+    path=other_path,
+)
+line = ctx.text.line(1)                            # source text
+handles = ctx.syntax.handles(kind="Call")         # opaque syntax identities
+parent = ctx.relations.parent(handles[0])          # syntax relationships
+```
+
+Every `ctx.project` query records its input for cache invalidation. Pass the file
+whose result depends on the query as `requester`, normally `ctx.path`. Construct
+diagnostics through the context as well:
+
+```python
+return [ctx.fault(node=node)]
+```
+
+See the [RuleContext reference](/reference/rule-context) for every zone, helper,
+fault constructor, public model, and configuration method. Prefer `ctx.nodes()`
+over `ast.walk(module)` for module-wide scans so cooperating rules share one
+traversal.
+
+## Where rules live
+
+Keep project rules in a `rules/` role module inside your tooling tree. A `rules/`
+module may contain imports, import-only `TYPE_CHECKING` blocks, and any number of
+`@rule` functions; supporting logic belongs in the other roles.
+
+```text
+scripts/fensu/rules/
+├── client_ownership.py
+└── service_boundaries.py
+```
+
+Name modules after the policy they implement. SFR706 rejects filenames that are
+exactly a core or custom rule code, such as `sft104.py` or `xac001.py`, because a
+descriptive name remains useful when policies grow or codes change.
+
+## Loading rules
+
+Point configuration at your rules, and select them:
+
+```toml
+tooling = ["scripts"]
+rule_paths = ["scripts/fensu/rules"]
+rule_modules = ["company_architecture.rules"]
+select = ["SF", "X001"]
+```
+
+- `rule_paths` are directories (or files) of `.py` modules. Each file is loaded
+  under an isolated synthetic module name, so it cannot pollute or collide with your
+  import namespace, and only the decorated functions that file defines are picked
+  up.
+- `rule_modules` are importable dotted names, loaded with a normal import. Their
+  source must resolve inside the repository.
+
+An import error in a rule file is reported as a clear configuration error naming the
+file, not a raw traceback. Every rule code across core and custom must be unique, so
+a duplicate code is rejected rather than silently overriding another rule.
+
+You enable custom rules like any other. The `X` family selector turns on all
+default-enabled custom rules; an exact code turns on a single rule (and is the only
+way to enable an `enabled_by_default=False` custom rule).
+
+## Testing rules
+
+Test a rule with the public harness rather than constructing internal objects. Each
+case runs one decorated rule through the same discovery, configuration, evaluation,
+and dependency tracking as `fensu check`. Import `RuleCase`, `RuleResult`,
+`evaluate_rule`, and `RuleFile` from `fensu`.
+
+```python
+import pytest
+
+from fensu import RuleCase, RuleResult, evaluate_rule
+
+from scripts.fensu.rules.client_ownership import no_global_client
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        RuleCase(
+            description="module-level client faults",
+            source="GLOBAL_CLIENT = object()\n",
+            expected_fault_count=1,
+        ),
+        RuleCase(
+            description="local client passes",
+            source="def build() -> object:\n    return object()\n",
+            expected_fault_count=0,
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_source_when_evaluating_then_matches_contract(test_case: RuleCase) -> None:
+    result: RuleResult = evaluate_rule(rule=no_global_client, test_case=test_case)
+
+    assert result.fault_count == test_case.expected_fault_count
+```
+
+`expected_fault_count` documents the case; `evaluate_rule` does not assert it for
+you. `RuleCase` accepts `path`, `scope` (`root`, `test`, or `tooling`),
+`scope_root`, supporting `files`, and a `config` fragment limited to `contracts`,
+`roles`, `rule_exceptions`, `threshold_overrides`, and `thresholds`. Supporting
+`RuleFile` entries are discovered as project context but are not direct evaluation
+targets. `RuleResult` exposes `faults`, `dependencies`, and `fault_count`.
+
+SFR707 requires each configured custom rule to have at least
+`min_custom_rule_test_cases` statically visible `RuleCase` instances (default `1`,
+`0` disables it). Keep cases in a visible `pytest.mark.parametrize` list calling
+`evaluate_rule(rule=<decorated function>, test_case=...)`; dynamic factories and
+opaque collections cannot prove a count.
+
+## Keeping custom rules cacheable
+
+[`fensu check` caches results](/cli/check#caching) by default, but a custom rule
+body is arbitrary Python, so Fensu cannot assume that it reads only inputs the
+cache can track. By default, selecting any custom rule disables caching for the
+whole run.
+
+Setting `require_cacheable = true` in the
+[`[cache]` table](/concepts/configuration#cache) changes this: every **selected**
+custom rule is verified at startup, and the run stays cached. This tracked-input
+isolation is sometimes called "hermeticity." Verification requires the rule's
+source file to:
+
+1. Import only from a pure standard-library allowlist (`ast`, `re`, `dataclasses`,
+   `typing`, `collections`, `enum`, `functools`, `itertools`, `pathlib` for lexical
+   path work, and similar pure modules), from `fensu` itself, and from the
+   configured rule packages.
+2. Never call `open`, `eval`, `exec`, `input`, or `__import__`.
+3. Never touch the filesystem directly. Read project state through the public
+   `ctx.project` zone (`exists`, `is_file`, `is_dir`, `directory_entries`, `glob`,
+   `python_anchor`, `analysis`, and focused semantic queries), which records inputs
+   so cache invalidation remains correct.
+
+A violation is a hard configuration error at startup naming the file, line, and
+reason. Unselected rules are never scanned. Repository-owned rule sources and
+helpers are content-hashed, so editing a rule or its helpers invalidates the cache
+correctly.
+
+## Selecting and inspecting
+
+Once configured, custom rules are indistinguishable from core rules to the rest of
+Fensu. They run under `fensu check`, they appear in
+[`fensu rule`](/cli/rule) (with their source file shown), and they are included in
+the guidance produced by [`fensu skills`](/cli/skills):
+
+```bash
+fensu rule X001
+```
+
+```text
+X001 no-global-client
+Family: custom
+Severity: error
+Kind: custom
+Enabled by default: yes
+Source: scripts/fensu/rules/client_ownership.py
+Message: GLOBAL_CLIENT hides ownership
+Remediation: Move the value to the module that owns and produces it.
+```
+
+Because the `message` and `remediation` envelope is the same one core rules use,
+your custom rules automatically become part of your repository's generated agent
+guidance, generated from the rules your CI enforces.
