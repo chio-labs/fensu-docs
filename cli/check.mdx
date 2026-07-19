@@ -62,7 +62,7 @@ When it finds problems, it prints one diagnostic per fault, then the summary. Ea
 diagnostic has a stable, editor-friendly shape:
 
 ```text
-SFA002  function 'run' must define a return type annotation
+FFA002  function 'run' must define a return type annotation
  --> src/my_package/main/run.py:5:0
   |
 5 | def run(a, b):
@@ -117,14 +117,14 @@ architectural drift into a build failure.
 ## Selecting what runs
 
 `fensu check` runs the rules resolved from your `select` and `ignore`
-configuration. Both take rule-code **prefixes**: `SF` is every core rule, `SFR` a
-family, `SFR3` a hundreds bucket, `SFR301` one rule; `X` is every custom rule,
+configuration. Both take rule-code **prefixes**: `FF` is every core rule, `FFR` a
+family, `FFR3` a hundreds bucket, `FFR301` one rule; `X` is every custom rule,
 `XDB` a custom namespace, `XDB001` one custom rule. To narrow a run, adjust those
 keys rather than the command:
 
 ```toml
-select = ["SFL", "SFR"]   # only layers and roles
-ignore = ["SFH007"]       # minus one rule
+select = ["FFL", "FFR"]   # only layers and roles
+ignore = ["FFH007"]       # minus one rule
 ```
 
 There is no inline suppression comment. When a rule genuinely does not fit, disable
