@@ -57,12 +57,12 @@ dataclass-backed parametrization) and annotation conventions (annotate every
 parameter and return, plus non-scalar local bindings) in the scopes where those
 apply. See [Rule families](/concepts/rule-families) for the full set.
 
-Fensu ships a **coherent default architecture**, not a blank rule language. You
-adopt it and get a serious starting structure, then disable rules, tune thresholds,
-or add your own rules deliberately once you know what you are changing.
+Fensu ships a **coherent default architecture**, not a blank canas. You
+adopt it and get a sensible starting point, then disable rules, tune thresholds,
+or add your own rules deliberately once you know what you are doing.
 
-Concretely, the default lays out code as domains built from a small set of roles.
-A domain holds the roles directly, or splits into named subdomains that do:
+The default lays out code as domains built from a small set of roles.
+A domain holds those roles directly, or splits into named subdomains that do:
 
 ```text
 src/my_package/
@@ -110,8 +110,8 @@ local edits but not at preserving architecture over time. They tend to:
 
 If you have to remind an agent of the same architectural rule repeatedly, that rule
 should probably be executable. Fensu's defaults target exactly these failure
-modes, and [`fensu skills`](/cli/skills) closes the loop: it generates agent
-guidance from your active rules, kept in sync automatically, so the rules your agent
+modes, and [`fensu skills`](/cli/skills) is the final piece: it generates agent
+guidance from your active rules, and keeps them in sync automatically. This means that the rules your agent
 follows are the rules your CI enforces.
 
 ## Battle-tested
@@ -119,9 +119,7 @@ follows are the rules your CI enforces.
 Fensu is not a tool built for an imagined problem. Earlier versions of these checks
 ran unnamed for months, first in workplace codebases and then in
 [sqlbuild](https://github.com/chio-labs/sqlbuild), a 100k+ line Python project.
-Fensu turns that hard-won structure into a reusable default. The default is
-opinionated; the point is to give you a serious starting structure instead of a
-blank page, then let you adapt it once you know what you are changing.
+That hard-won structure is what shaped the defaults.
 
 ## Get started
 
