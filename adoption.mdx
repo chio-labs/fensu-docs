@@ -4,14 +4,12 @@ description: "How to roll Fensu out on a new repo, a small existing repo, or a l
 ---
 
 Fensu's defaults describe a coherent target architecture. How you turn them on
-depends on where you are starting. The first two situations below are where Fensu
-pays off fastest; the third needs more judgment.
+depends on where you are starting. New / small repos are where Fensu
+pays off fastest; big legacy repos(e.g. 100k+ lines) need more judgment.
 
 ## New repositories
 
-The defaults are calibrated for a fresh repo. Turn everything on from the first
-commit: there is very little to fix, because there is little code yet, and the rules
-keep the structure intact as it grows.
+The defaults are calibrated for a fresh repo.
 
 ```bash
 fensu init
@@ -23,9 +21,8 @@ live with, because you never accumulate drift in the first place.
 
 ## Small existing repositories
 
-This is the strongest first experience. Whether the repo is tidy or a little
-inconsistent, if it is small enough that reaching zero faults is realistic, adoption
-is mostly a single pass that leaves it on a coherent architecture.
+This is the strongest first experience. Whether the repo is tidy or very
+inconsistent, adoption is mostly a single pass that leaves it on a coherent architecture.
 
 1. **Initialize** in the directory that holds your `pyproject.toml`:
 
@@ -47,8 +44,8 @@ is mostly a single pass that leaves it on a coherent architecture.
    real design decision, leave it and list it for me instead of forcing a change.
    ```
 
-   Most faults are local, mechanical corrections. The few that would require a
-   genuine structural decision are worth pausing on rather than rushing.
+   Most faults are pretty mechanical to fix, but open enough that they can't be auto fixed. 
+   The few that would require a genuine structural decision are worth pausing on rather than rushing.
 
 4. **Defer the handful you want to think about.** Record them as explicit
    [rule exceptions](/concepts/configuration#exact-rule-exceptions) or `ignore`

@@ -10,7 +10,7 @@ reading its output.
   **Fastest wins.** On a **brand-new** repo, run [`fensu init`](/cli/init) and keep
   everything on from the first commit. On a **small existing** repo, run
   `fensu init` in your `pyproject.toml` directory, then drive the faults to zero
-  (a coding agent handles most of them). That single pass is where Fensu pays off
+  (a coding agent handles can handle these easily). That single pass is where Fensu pays off
   most. Larger codebases need more judgment; see [Adopting Fensu](/adoption).
 </Tip>
 
@@ -67,13 +67,13 @@ When it finds a problem, it prints a diagnostic for each fault and exits `1`. Th
 output points at the exact line, shows the source, and explains the fix:
 
 ```text
-FFA002  function 'run' must define a return type annotation
- --> src/my_package/main/run.py:5:0
+FFL102  import 'my_package.payments.processing._helpers.charge_card' reaches into internal structure of 'my_package.payments'
+ --> src/my_package/orders/checkout/main/place_order.py:1:0
   |
-5 | def run(a, b):
+1 | from my_package.payments.processing._helpers.charge_card import charge_card
   | ^
   |
-  = help: Declare the returned value type, using None when the function returns no value.
+  = help: Import from classes, models, types, constants, exceptions, or a thin main/ entry.
 ```
 
 Every diagnostic has two parts: the `message` states the contract that was
