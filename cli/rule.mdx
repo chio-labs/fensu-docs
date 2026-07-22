@@ -50,6 +50,10 @@ The lookup is **case-insensitive**, so `fensu rule ffs131` works too.
 `warn` assigns it to the project's advisory tier without changing that metadata.
 Use [`fensu check --warn`](/cli/check#warnings) to see the effective tier in a run.
 
+When the queried code matches configured exact exceptions or path-scoped
+`rule_ignores`, `fensu rule` also prints those active policy declarations and their
+reasons.
+
 ## Custom and configured rules
 
 `fensu rule` reads the whole catalogue for the current repository, so it resolves

@@ -76,6 +76,8 @@ silently dropped key is how a typo quietly disables a rule.
 - Each `rule_exceptions` entry must name one exact rule, one exact Python file, and
   a non-empty `reason`. An optional `symbols` list must contain one or more
   qualified functions when present.
+- Each `rule_ignores` entry must define non-empty `rules` selectors, non-empty
+  repository-relative POSIX glob `paths`, and a non-empty `reason`.
 - `[evaluation]` accepts only `include` and `exclude`; when present, each is a
   non-empty list of repository-relative POSIX globs.
 - `[skills]` accepts only an optional non-empty `name`.
@@ -96,6 +98,7 @@ silently dropped key is how a typo quietly disables a rule.
 | `thresholds` | table | shipped defaults | Global threshold overrides. |
 | `threshold_overrides` | array of tables | `[]` | Path-scoped threshold overrides with reasons. |
 | `rule_exceptions` | array of tables | `[]` | Exact rule/file exceptions, optionally narrowed to symbols, with reasons. |
+| `rule_ignores` | array of tables | `[]` | Additive selector-and-path finding suppression with reasons. |
 | `evaluation` | table | evaluate all discovered files | Direct rule-evaluation include/exclude globs. |
 | `cache` | table | caching on | Result-cache settings for `fensu check`. |
 | `skills` | table | inferred identity | Generated agent-skill settings. |
@@ -212,6 +215,28 @@ globs, directories, line numbers, and rule prefixes are not accepted. The path a
 symbols must exist, and `fensu check` fails if either form becomes stale and
 suppresses no fault.
 
+## Path-scoped rule ignores
+
+Use `[[rule_ignores]]` when selected rules should remain active globally but their
+findings are accepted under explicit path patterns:
+
+```toml
+[[rule_ignores]]
+rules = ["FFA", "XGENERATED"]
+paths = ["src/my_package/generated/**", "conftest.py"]
+reason = "Generated interfaces are checked by their source schema."
+```
+
+A finding is suppressed only when one declaration matches both its exact rule code
+through a selector and its reported repository-relative path through a glob.
+Different declarations cannot combine one declaration's selector with another's
+path. The rules still execute, ignored files remain available as complete project
+context, and the policy applies equally to blocking findings and `--warn` findings.
+
+Unlike exact `rule_exceptions`, path-scoped ignores are not stale-checked. Exact
+exceptions are applied and validated first, so a broad ignore cannot conceal a
+stale exact waiver.
+
 ## Evaluation targeting
 
 The `[evaluation]` table narrows which discovered Python files receive direct rule
@@ -262,12 +287,13 @@ These controls solve different problems:
 | `warn` selectors | Report matching rules as nonblocking advice with `fensu check --warn`. |
 | `ignore` selectors | Disable matching rules globally. |
 | `rule_exceptions` | Suppress an exact file-level or rule/file/symbol finding and fail when it becomes stale. |
+| `rule_ignores` | Keep rules and project context active, but suppress matching selector/path findings. |
 | `evaluation.include` | Make a discovered subset the direct evaluation target. |
 | `evaluation.exclude` | Run no direct rules for matching discovered files. |
 
-Use `ignore` when a rule is wrong globally, `rule_exceptions` for isolated
-file-level or named-symbol findings, and evaluation targeting as the broad migration
-boundary for whole regions.
+Use `ignore` when a rule is wrong globally, `rule_exceptions` for isolated exact
+findings, `rule_ignores` for an accepted rule/path intersection, and evaluation
+targeting when matching files should receive no direct rule execution.
 
 ## Thresholds
 

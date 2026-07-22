@@ -212,14 +212,19 @@ traversal.
 
 ## Where rules live
 
-Keep project rules in a `rules/` role module inside your tooling tree. A `rules/`
-module may contain imports, import-only `TYPE_CHECKING` blocks, and any number of
-`@rule` functions; supporting logic belongs in the other roles.
+Keep decorated project rules in a `rules/` role module inside your tooling tree. A
+`rules/` module may contain imports, import-only `TYPE_CHECKING` blocks, and any
+number of `@rule` functions. Shared implementation belongs in the sibling
+`_helpers/`; constants belong in the policy package's sibling `constants.py`.
 
 ```text
-scripts/fensu_policy/rules/
-├── client_ownership.py
-└── service_boundaries.py
+scripts/fensu_policy/
+├── constants.py
+├── _helpers/
+│   └── client_ownership.py
+└── rules/
+    ├── client_ownership.py
+    └── service_boundaries.py
 ```
 
 Name modules after the policy they implement. FFR706 rejects filenames that are
@@ -232,8 +237,10 @@ Point configuration at your rules, and select them:
 
 ```toml
 tooling = ["scripts"]
-rule_paths = ["scripts/fensu_policy/rules"]
-rule_modules = ["company_architecture.rules"]
+rule_modules = [
+  "scripts.fensu_policy.rules.client_ownership",
+  "scripts.fensu_policy.rules.service_boundaries",
+]
 select = ["FF", "X001"]
 ```
 
@@ -259,32 +266,68 @@ case runs one decorated rule through the same discovery, configuration, evaluati
 and dependency tracking as `fensu check`. Import `RuleCase`, `RuleResult`,
 `evaluate_rule`, and `RuleFile` from `fensu`.
 
+Define a local wrapper in `_test_types.py`:
+
+```python
+from dataclasses import dataclass
+
+from fensu import RuleFile
+
+
+@dataclass(frozen=True)
+class CustomRuleTestCase:
+    description: str
+    path: str
+    source: str
+    expected_fault_count: int
+    files: tuple[RuleFile, ...] = ()
+    scope: str = "root"
+    scope_root: str | None = None
+```
+
+Parametrize with that local type, then construct `RuleCase` inside the test:
+
 ```python
 import pytest
 
 from fensu import RuleCase, RuleResult, evaluate_rule
-
 from scripts.fensu_policy.rules.client_ownership import no_global_client
+from tests.unit.scripts.fensu_policy.rules._test_types import CustomRuleTestCase
 
 
 @pytest.mark.parametrize(
     "test_case",
     [
-        RuleCase(
+        CustomRuleTestCase(
             description="module-level client faults",
+            path="package/example.py",
             source="GLOBAL_CLIENT = object()\n",
             expected_fault_count=1,
         ),
-        RuleCase(
+        CustomRuleTestCase(
             description="local client passes",
+            path="package/example.py",
             source="def build() -> object:\n    return object()\n",
             expected_fault_count=0,
         ),
     ],
     ids=lambda case: case.description,
 )
-def test_given_source_when_evaluating_then_matches_contract(test_case: RuleCase) -> None:
-    result: RuleResult = evaluate_rule(rule=no_global_client, test_case=test_case)
+def test_given_source_when_evaluating_then_matches_contract(
+    test_case: CustomRuleTestCase,
+) -> None:
+    result: RuleResult = evaluate_rule(
+        rule=no_global_client,
+        test_case=RuleCase(
+            description=test_case.description,
+            path=test_case.path,
+            source=test_case.source,
+            expected_fault_count=test_case.expected_fault_count,
+            files=test_case.files,
+            scope=test_case.scope,
+            scope_root=test_case.scope_root,
+        ),
+    )
 
     assert result.fault_count == test_case.expected_fault_count
 ```
@@ -292,7 +335,7 @@ def test_given_source_when_evaluating_then_matches_contract(test_case: RuleCase)
 `expected_fault_count` documents the case; `evaluate_rule` does not assert it for
 you. `RuleCase` accepts `path`, `scope` (`root`, `test`, or `tooling`),
 `scope_root`, supporting `files`, and a `config` fragment limited to `contracts`,
-`roles`, `rule_exceptions`, `threshold_overrides`, and `thresholds`. Supporting
+`roles`, `rule_exceptions`, `rule_ignores`, `threshold_overrides`, and `thresholds`. Supporting
 `RuleFile` entries are discovered as project context but are not direct evaluation
 targets. `RuleResult` exposes `faults`, `dependencies`, and `fault_count`.
 
@@ -301,6 +344,11 @@ FFR707 requires each configured custom rule to have at least
 `0` disables it). Keep cases in a visible `pytest.mark.parametrize` list calling
 `evaluate_rule(rule=<decorated function>, test_case=...)`; dynamic factories and
 opaque collections cannot prove a count.
+
+When FFT413 is active, direct `RuleCase` parametrization is not compliant because
+the framework model is not defined in the local `_test_types.py`. The wrapper above
+satisfies FFR707, FFT204, and FFT413 together. Before declaring diagnostics
+contradictory, test whether a small adapter or wrapper composes their contracts.
 
 ## Keeping custom rules cacheable
 
@@ -329,6 +377,11 @@ A violation is a hard configuration error at startup naming the file, line, and
 reason. Unselected rules are never scanned. Repository-owned rule sources and
 helpers are content-hashed, so editing a rule or its helpers invalidates the cache
 correctly.
+
+For cacheable policy packages, configure concrete `rule_modules`. Keep decorated
+declarations in `rules/`, shared support in the sibling `_helpers/`, and constants
+in sibling `constants.py`. “Configured rule package” does not mean helpers belong
+beneath `rules/`; that layout violates FFR704.
 
 ## Selecting and inspecting
 
