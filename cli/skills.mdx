@@ -110,6 +110,10 @@ fensu skills --check
 Current files exit `0`. Missing, stale, divergent, or malformed generated files
 exit `1` and list the affected paths. Ownership collisions exit `2`.
 
+Treat this command as the onboarding completion gate. `fensu init --yes` installs
+all three local targets by default; a successful init followed by a successful
+freshness check proves repository-local agent guidance reflects the active policy.
+
 `fensu check` also prints a non-failing stale-skill notice when it can identify an
 installed local skill that needs regeneration.
 

@@ -7,10 +7,11 @@ This guide gets Fensu running against a Python repository and walks through
 reading its output.
 
 <Tip>
-  **Fastest wins.** On a **brand-new** repo, run [`fensu init`](/cli/init) and keep
+  **Fastest wins.** On a **brand-new** repo, run [`fensu init`](/cli/init) with
+  `--yes --name NAME` and keep
   everything on from the first commit. On a **small existing** repo, run
-  `fensu init` in your `pyproject.toml` directory, then drive the faults to zero
-  (a coding agent handles can handle these easily). That single pass is where Fensu pays off
+  `fensu init --yes` in your `pyproject.toml` directory, then drive the faults to zero
+  (a coding agent can handle these easily). That single pass is where Fensu pays off
   most. Larger codebases need more judgment; see [Adopting Fensu](/adoption).
 </Tip>
 
@@ -27,16 +28,23 @@ Fensu needs Python 3.12 or newer.
 
 [`fensu init`](/cli/init) is the fastest way to start. It detects your layout,
 writes a `fensu.toml` with the full ruleset enabled, runs a first check to show
-current drift, and offers to install [agent skill files](/cli/skills):
+current drift, and installs [agent skill files](/cli/skills):
 
 ```bash
-fensu init
+fensu init --yes
 ```
 
-If you accept the prompts, your repository is configured and you can start
-checking right away. For an empty repository with no code yet, init scaffolds a
-`src/` package and `tests/` directory; pass `--yes --name my_package` to run it
-non-interactively.
+The native initializer is non-interactive. For an empty repository with no code,
+run `fensu init --yes --name my_package`; init scaffolds a `src/` package and
+`tests/` directory. Pass `--no-skills` only when automation explicitly needs
+configuration without repository-local agent guidance.
+
+Verify that every generated local skill is present and current before calling
+onboarding complete:
+
+```bash
+fensu skills --check
+```
 
 Prefer to write configuration by hand? A minimal `fensu.toml` only needs your
 product roots:

@@ -2,6 +2,14 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Fensu",
+  "description": "Fensu enforces architectural boundaries, repository structure, code shape, and test conventions in Python projects.",
+  "markdown": {
+    "instructions": [
+      "Read the Fensu Quickstart before onboarding a repository.",
+      "Use fensu init --yes for an existing repository, or fensu init --yes --name NAME for an empty repository. Use --no-skills only when configuration-only initialization is explicitly required.",
+      "Do not call Fensu onboarding complete until fensu skills --check succeeds."
+    ]
+  },
   "colors": {
     "primary": "#E84B03",
     "light": "#FF6A2B",

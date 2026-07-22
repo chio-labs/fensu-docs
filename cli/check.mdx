@@ -129,10 +129,22 @@ ignore = ["FFH007"]       # minus one rule
 
 There is no inline suppression comment. When a rule genuinely does not fit, disable
 it globally, add an exact [rule exception](/concepts/configuration#exact-rule-exceptions),
+add a [path-scoped rule ignore](/concepts/configuration#path-scoped-rule-ignores),
 or replace it with a custom rule. Use
 [evaluation targeting](/concepts/configuration#evaluation-targeting) when a whole
 region is outside the current adoption boundary. See
 [Philosophy](/philosophy#how-to-deviate) for why.
+
+## Post-check cleanup
+
+After either a native or custom-rule check, Fensu removes empty subdirectories
+under configured product, test, and tooling roots. It also removes a bytecode-only
+subtree when deleting regular `.pyc` or `.pyo` files beneath `__pycache__` makes
+that subtree empty. It does not purge caches from active source trees.
+
+Configured roots, source and unknown files, non-empty directories, symlinks,
+concurrent additions, and paths outside configured roots are preserved. Cleanup is
+best-effort and never changes the check's output or exit code.
 
 ## Caching
 
