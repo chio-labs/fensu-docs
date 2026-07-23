@@ -57,6 +57,10 @@ rule at startup and keeps such runs cached; see
 [Custom rules](/concepts/custom-rules#keeping-custom-rules-cacheable) for the
 tracked-input contract that verification enforces.
 
+Typed rule-option current values and declaration schemas are cache inputs. Changing
+an override, default, type, choice, or bound invalidates reusable findings;
+`ctx.option()` reads only these validated immutable values.
+
 ## When something looks wrong
 
 `fensu check --no-cache` runs with the cache fully bypassed. If cached and

@@ -95,6 +95,7 @@ silently dropped key is how a typo quietly disables a rule.
 | `ignore` | list of selectors | `[]` | Rule codes to disable. |
 | `rule_paths` | list of strings | `[]` | Directories of custom rule files to load. |
 | `rule_modules` | list of strings | `[]` | Importable module names holding custom rules. |
+| `rule_options` | rule-code tables | declared defaults | Per-rule option overrides validated against the discovered catalogue. |
 | `thresholds` | table | shipped defaults | Global threshold overrides. |
 | `threshold_overrides` | array of tables | `[]` | Path-scoped threshold overrides with reasons. |
 | `rule_exceptions` | array of tables | `[]` | Exact rule/file exceptions, optionally narrowed to symbols, with reasons. |
@@ -422,6 +423,28 @@ select = ["FF", "XAC001"]
 Loaded custom rules merge with the core rules into one catalogue, so they appear in
 `fensu check`, [`fensu rule`](/cli/rule), and [`fensu skills`](/cli/skills) once
 configured. See [Custom rules](/concepts/custom-rules) for the authoring API.
+
+## Rule options
+
+Rules may declare typed options with defaults or required values. Repositories write
+only overrides, keyed by exact rule code:
+
+```toml
+[rule_options.XAC001]
+allowed_names = ["alpha", "beta"]
+strict = true
+```
+
+Fensu discovers the complete core and custom catalogue before validating these
+tables. Unknown rule codes, option-free rules, unknown names, wrong scalar or list
+types, missing required options, and failed choices or bounds stop the run before
+evaluation. Options on unselected rules are validated too, so dormant typos cannot
+remain hidden.
+
+The rule's **default** remains in source. A TOML value is an **override**. The
+**current value** is the override when present and otherwise the default. Lists are
+passed to rules as immutable tuples. Rule options do not replace thresholds,
+contracts, exact exceptions, path-scoped ignores, or threshold overrides.
 
 ## Cache
 

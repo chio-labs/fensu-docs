@@ -156,6 +156,11 @@ rules share Fensu's single traversal.
 | --- | --- | --- |
 | `threshold(name, path=None)` | `int` | The value for a `Threshold` after global, per-role, and path overrides. |
 | `contracts()` | `Mapping[str, str]` | The configured function-name behavior contracts. |
+| `option(declaration)` | declaration-specific type | The current value of an option declared by the active rule. |
+
+Pass the exact `RuleOption[T]` declaration from the active rule to preserve the
+static return type. Requests for undeclared or cross-rule options are authoring
+errors. Values are immutable and already validated before evaluation.
 
 ## Public models
 

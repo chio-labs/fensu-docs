@@ -78,7 +78,7 @@ Python you like.
 Import rule-authoring names from the top-level package:
 
 ```python
-from fensu import rule, Fault, Family, Severity, Threshold, RuleContext
+from fensu import rule, Fault, Family, Severity, Threshold, RuleContext, RuleOption
 ```
 
 Anything not exported is internal and may change.
@@ -104,6 +104,7 @@ def rule(
     remediation: str | None = None,
     severity: Severity = Severity.ERROR,
     enabled_by_default: bool = True,
+    options: tuple[RuleOption[object], ...] = (),
 ) -> Callable[[RuleCheck], RuleCheck]: ...
 ```
 
@@ -116,6 +117,7 @@ def rule(
 | `remediation` | no | The normal correction, shown as `= help:`. |
 | `severity` | no | `Severity.ERROR` (default) or `Severity.WARNING`. |
 | `enabled_by_default` | no | Set `False` for an opt-in rule that runs only when selected by code. |
+| `options` | no | Immutable typed options this rule declares and may read through `ctx.option()`. |
 
 ### Codes and namespaces
 
@@ -209,6 +211,47 @@ See the [RuleContext reference](/reference/rule-context) for every zone, helper,
 fault constructor, public model, and configuration method. Prefer `ctx.nodes()`
 over `ast.walk(module)` for module-wide scans so cooperating rules share one
 traversal.
+
+## Typed rule options
+
+Use `RuleOption` when one reusable rule needs repository-specific policy values.
+The rule author owns the **default**; `fensu.toml` may provide an **override**; the
+rule receives the resulting **current value**. Only overrides belong in TOML.
+
+```python
+_ALLOWED_NAMES = RuleOption.string_list(
+    name="allowed_names",
+    default=(),
+    description="Names permitted by this policy.",
+)
+
+@rule(
+    code="X001",
+    family=Family.CUSTOM,
+    slug="approved-names",
+    message="name is not approved",
+    options=(_ALLOWED_NAMES,),
+)
+def approved_names(*, module: ast.Module, ctx: RuleContext) -> list[Fault]:
+    allowed_names: tuple[str, ...] = ctx.option(_ALLOWED_NAMES)
+    ...
+```
+
+Supported constructors are `boolean`, `integer`, `string`, `string_list`, and
+`integer_list`. Lists resolve to immutable tuples. Integer declarations may set
+`minimum` and `maximum`, strings may set `choices`, and lists may set
+`minimum_items`. An option without a default must use `required=True`.
+
+Override values by exact rule code:
+
+```toml
+[rule_options.X001]
+allowed_names = ["alpha", "beta"]
+```
+
+Fensu validates declarations, defaults, required values, override types, choices,
+and bounds before rule selection or evaluation. A rule can read only declarations
+it owns; there is no string-keyed or cross-rule option API.
 
 ## Where rules live
 
@@ -338,6 +381,9 @@ you. `RuleCase` accepts `path`, `scope` (`root`, `test`, or `tooling`),
 `roles`, `rule_exceptions`, `rule_ignores`, `threshold_overrides`, and `thresholds`. Supporting
 `RuleFile` entries are discovered as project context but are not direct evaluation
 targets. `RuleResult` exposes `faults`, `dependencies`, and `fault_count`.
+Pass `rule_options` to evaluate one source case under different overrides. The
+harness uses the production resolver, applies defaults, rejects invalid or missing
+values, and converts list overrides to tuples.
 
 FFR707 requires each configured custom rule to have at least
 `min_custom_rule_test_cases` statically visible `RuleCase` instances (default `1`,
@@ -377,6 +423,10 @@ A violation is a hard configuration error at startup naming the file, line, and
 reason. Unselected rules are never scanned. Repository-owned rule sources and
 helpers are content-hashed, so editing a rule or its helpers invalidates the cache
 correctly.
+
+Resolved current values and complete option schemas participate in cache identity.
+Changing an override, default, type, choice, or bound invalidates affected cached
+results. `ctx.option()` is therefore safe in a cacheable rule.
 
 For cacheable policy packages, configure concrete `rule_modules`. Keep decorated
 declarations in `rules/`, shared support in the sibling `_helpers/`, and constants
