@@ -1,6 +1,6 @@
 ---
 title: fensu map
-description: "Render a deterministic downstream call tree for a function, with clickable locations."
+description: "Render a deterministic downstream or upstream call tree for a function, with clickable locations."
 ---
 
 `fensu map` renders a function's call lineage as a deterministic terminal tree. It
@@ -10,7 +10,8 @@ useful for recovering the mental map of a large codebase on demand, without payi
 a model to rediscover it each time.
 
 ```bash
-fensu map SYMBOL [--root ROOT ...] [--depth N] [--paths MODE] [--color MODE]
+fensu map SYMBOL [--direction DIRECTION] [--root ROOT ...] [--depth N]
+                  [--paths MODE] [--color MODE]
                   [--cache | --no-cache] [--cache-stats]
 ```
 
@@ -21,7 +22,7 @@ fensu map SYMBOL [--root ROOT ...] [--depth N] [--paths MODE] [--color MODE]
 
 ## Usage
 
-Point it at a function to get its downstream call tree:
+Point it at a function to get its downstream call tree, the default direction:
 
 ```bash
 fensu map run_check --root src
@@ -42,8 +43,18 @@ run_check(...)  src/fensu/cli/main/check.py:23
 ```
 
 Each node is one resolved call, shown with its function name and a `path:line`
-location. Calls are listed in source order, and locations are repository-relative by
-default so editors can make them clickable.
+location. Downstream calls are listed in source order, and locations are
+repository-relative by default so editors can make them clickable.
+
+Use upstream direction to trace the functions that call the selected function:
+
+```bash
+fensu map evaluate --direction upstream
+```
+
+Upstream mapping inverts the same project-call edges that downstream mapping can
+prove. It includes concrete inherited-method dispatch, but omits callers across
+unresolved parameter or dynamic seams rather than guessing.
 
 ## Selecting a symbol
 
@@ -82,7 +93,7 @@ the repository root.
 | `--depth` | non-negative integer | `3` | Maximum call depth before truncation. |
 | `--paths` | `relative`, `absolute`, `compact`, `none` | `relative` | How locations are displayed. |
 | `--color` | `auto`, `always`, `never` | `auto` | ANSI color behavior. |
-| `--direction` | `downstream` | `downstream` | Direction of the walk. |
+| `--direction` | `downstream`, `upstream` | `downstream` | Follow proven callees or proven callers. |
 | `--cache` / `--no-cache` | flag | configured | Enable or disable the persistent map index for this run. |
 | `--cache-stats` | flag | off | Write map cache operation counts to stderr. |
 
@@ -111,8 +122,8 @@ storage but remains separate from cached check results.
 
 ## What the walk resolves
 
-The current provider is a conservative pure-Python analysis of project functions
-and methods. It resolves:
+The native provider performs a conservative analysis of project functions and
+methods. It resolves:
 
 - same-module calls,
 - absolute and relative direct imports,
@@ -122,10 +133,12 @@ and methods. It resolves:
 - concrete method calls through constructors, imports, annotations, and `self` or
   `cls` dispatch.
 
-It does not guess dynamic dispatch. Calls made through a function parameter are
-shown as **unresolved seams** rather than invented targets. Protocol and dynamic
-method calls remain unresolved rather than guessed. This keeps the map trustworthy:
-what it draws, it can stand behind.
+It does not guess dynamic dispatch. In downstream trees, calls made through a
+function parameter are shown as **unresolved seams** rather than invented targets.
+In upstream trees, unresolved calls are omitted because they cannot be attributed
+to a proven target. Protocol dispatch resolves only when one concrete target can
+be proven; ambiguous protocol and dynamic method calls remain unresolved rather
+than guessed. This keeps the map trustworthy: what it draws, it can stand behind.
 
 ## Markers
 
@@ -153,6 +166,6 @@ Unknown project function: does_not_exist
 ## Not yet available
 
 `fensu map` is deliberately conservative today. The following are planned and not
-part of current behavior: upstream (incoming-call) mapping, protocol dispatch
-resolution, JSON output, helper collapsing and layered rendering, and docstring
-captions. This page documents only what the command does now.
+part of current behavior: broader protocol dispatch resolution, JSON output,
+helper collapsing and layered rendering, and docstring captions. This page
+documents only what the command does now.
