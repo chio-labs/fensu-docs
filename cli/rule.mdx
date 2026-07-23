@@ -45,6 +45,7 @@ The lookup is **case-insensitive**, so `fensu rule ffs131` works too.
 | Source | `core`, or the file or module a custom rule was loaded from. |
 | Message | The one-sentence statement of the violated contract. |
 | Remediation | The normal correction, or `None provided.` if the rule sets none. |
+| Options | Declared types, defaults, current values, descriptions, choices, and bounds. |
 
 `Severity` is catalogue metadata declared by the rule. Configuring a rule in
 `warn` assigns it to the project's advisory tier without changing that metadata.
@@ -73,7 +74,23 @@ Enabled by default: yes
 Source: scripts/fensu_policy/rules/boundaries.py
 Message: ACME_GLOBAL hides ownership
 Remediation: Move the value to the module that owns and produces it.
+
+Options:
+  allowed_names
+    Type: list[string]
+    Required: false
+    Default: []
+    Current value: ["alpha", "beta"]
+    Description: Names permitted by this policy.
+    Choices: null
+    Minimum: None
+    Maximum: None
+    Minimum items: None
 ```
+
+For an option without a default, `Default` is `required`. Defaults come from rule
+source; current values use a TOML override when present. `fensu rule` never writes
+either value back to configuration.
 
 ## Options
 
