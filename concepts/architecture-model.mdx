@@ -291,7 +291,9 @@ form tell you what it exercises and how to read it.
 
 - **Mirrored.** Tests live under a scope of `unit/`, `integration/`, or `e2e/`, then
   mirror the source path they exercise. A test for `src/my_package/config/main/`
-  lives at `tests/unit/src/my_package/config/main/`.
+  lives at `tests/unit/src/my_package/config/main/`. Set
+  [`test_scopes`](/concepts/configuration#test-scopes) if your project uses a
+  different set.
 - **Named for behavior.** Test files start with `test_`, and each test is
   `test_given_<state>_when_<action>_then_<outcome>`, so the precondition, action, and
   expectation are readable without opening the body.

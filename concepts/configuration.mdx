@@ -89,6 +89,7 @@ silently dropped key is how a typo quietly disables a rule.
 | --- | --- | --- | --- |
 | `roots` | list of strings | required | Product code scopes. No nesting. |
 | `tests` | list of strings | `["tests"]` | Test scopes. |
+| `test_scopes` | list of strings | `["unit", "integration", "e2e"]` | Directory names allowed directly under a test root. |
 | `tooling` | list of strings | `[]` | Dev tooling scopes. |
 | `select` | list of selectors | `["FF"]` | Blocking rules to enable. |
 | `warn` | list of selectors | `[]` | Advisory rules evaluated by `fensu check --warn`. |
@@ -294,6 +295,31 @@ These controls solve different problems:
 Use `ignore` when a rule is wrong globally, `rule_exceptions` for isolated exact
 findings, `rule_ignores` for an accepted rule/path intersection, and evaluation
 targeting when matching files should receive no direct rule execution.
+
+## Test scopes
+
+Every test lives under a scope directory directly beneath a test root, and
+`test_scopes` lists the names allowed there. The default is:
+
+```toml
+test_scopes = ["unit", "integration", "e2e"]
+```
+
+Set it when your project uses a different vocabulary. A suite that runs against real
+external services is a common addition:
+
+```toml
+test_scopes = ["unit", "integration", "e2e", "real"]
+```
+
+The value replaces the default rather than adding to it, so list every scope you
+want. Each entry is a single lowercase directory name, entries must be unique, and
+the list must not be empty.
+
+The list stays closed on purpose. `tests/uint/` is a typo rather than a new scope,
+and `FFT002` reports it instead of leaving that tree unchecked. Mirroring is
+unchanged for a configured scope, so `tests/real/src/my_package/config/main/` mirrors
+`src/my_package/config/main/` the same way `tests/unit/` does.
 
 ## Thresholds
 
