@@ -67,6 +67,7 @@ silently dropped key is how a typo quietly disables a rule.
   import package name (for example a `roots` entry and a `tooling` entry both
   ending in `tools/`).
 - Selectors in `select`, `warn`, and `ignore` must be well formed.
+- Native `rule_packs` names must be registered and unique.
 - A resolved rule may not be both blocking and warning, or both warning and
   ignored.
 - Threshold keys must be known threshold names with non-negative integer values.
@@ -96,6 +97,7 @@ silently dropped key is how a typo quietly disables a rule.
 | `ignore` | list of selectors | `[]` | Rule codes to disable. |
 | `rule_paths` | list of strings | `[]` | Directories of custom rule files to load. |
 | `rule_modules` | list of strings | `[]` | Importable module names holding custom rules. |
+| `rule_packs` | list of strings | `[]` | Fensu-shipped native policies to make available. |
 | `rule_options` | rule-code tables | declared defaults | Per-rule option overrides validated against the discovered catalogue. |
 | `thresholds` | table | shipped defaults | Global threshold overrides. |
 | `threshold_overrides` | array of tables | `[]` | Path-scoped threshold overrides with reasons. |
@@ -119,19 +121,27 @@ prefix of a valid code works:
 | `FFR` | One core family (here: roles). |
 | `FFR3` | One hundreds bucket (here: the `FFR3xx` layout rules). |
 | `FFR301` | Exactly one rule. |
+| `FP` | Every activated native-pack rule. |
+| `FPDG` | The complete activated Dagster policy. |
+| `FPDGA` | Dagster aliases of the core annotations family. |
+| `FPDG024` | Exactly one Dagster-native policy. |
 | `X` | Every custom rule. |
 | `XDB` | A custom namespace (every rule whose code starts with `XDB`). |
 | `XDB001` | Exactly one custom rule. |
 
 The core family letters are `FFL`, `FFR`, `FFS`, `FFN`, `FFH`, `FFT`, and `FFA`;
-see [Rule families](/concepts/rule-families). Custom selectors follow custom
-codes: `X` plus optional uppercase letters plus optional digits, so namespaces
-nest by prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)).
+see [Rule families](/concepts/rule-families). `FP` is reserved for activated
+[native rule packs](/concepts/rule-packs). Custom selectors follow custom codes:
+`X` plus optional uppercase letters plus optional digits, so namespaces nest by
+prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)).
 
 ### The default
 
 `select` defaults to `["FF"]`, which turns on every family. If you want all of
 Fensu's opinion, set nothing: the default already does it.
+
+Native packs are not part of that default. A pack must be named in `rule_packs`
+before its selectors become available.
 
 ### Run only some families
 
@@ -184,6 +194,9 @@ rejected as an overlap.
 - Selecting a family does **not** pull in that family's opt-in (default-off) rules.
   Only naming such a rule by its exact code turns it on (for example
   `select = ["FF", "FFS102"]`).
+- Activating a native pack makes its catalogue available but does not select it.
+  Select the pack namespace separately, for example `rule_packs = ["dagster"]`
+  with `select = ["FPDG"]`.
 
 ## Exact rule exceptions
 
@@ -428,6 +441,21 @@ function matches patterns with different behaviors, evaluation fails with a
 configuration error naming the function, file, and conflicting patterns. For a
 behavior outside these four categories, write a [custom rule](/concepts/custom-rules).
 
+## Native rule packs
+
+`rule_packs` activates Fensu-shipped Rust policies by registered name. The
+currently shipped pack is `dagster`:
+
+```toml
+rule_packs = ["dagster"]
+select = ["FPDG"]
+```
+
+The Dagster pack is a standalone architecture policy containing native framework
+rules and transparent aliases of retained core rules. See
+[Native rule packs](/concepts/rule-packs) for its codes, alias behavior, and
+autoload option.
+
 ## Custom rule loading
 
 `rule_paths` and `rule_modules` tell Fensu where to find custom rules.
@@ -446,9 +474,10 @@ select = ["FF", "XAC001"]
   import. Their Python source must be inside the repository so diagnostics, test
   coverage, and cache identity have a stable owner.
 
-Loaded custom rules merge with the core rules into one catalogue, so they appear in
-`fensu check`, [`fensu rule`](/cli/rule), and [`fensu skills`](/cli/skills) once
-configured. See [Custom rules](/concepts/custom-rules) for the authoring API.
+Loaded custom rules merge with core rules and activated native packs into one
+catalogue, so they appear in `fensu check`, [`fensu rule`](/cli/rule), and
+[`fensu skills`](/cli/skills) once configured. See
+[Custom rules](/concepts/custom-rules) for the authoring API.
 
 ## Rule options
 
@@ -461,11 +490,11 @@ allowed_names = ["alpha", "beta"]
 strict = true
 ```
 
-Fensu discovers the complete core and custom catalogue before validating these
-tables. Unknown rule codes, option-free rules, unknown names, wrong scalar or list
-types, missing required options, and failed choices or bounds stop the run before
-evaluation. Options on unselected rules are validated too, so dormant typos cannot
-remain hidden.
+Fensu discovers the complete core, activated pack, and custom catalogue before
+validating these tables. Unknown rule codes, option-free rules, unknown names,
+wrong scalar or list types, missing required options, and failed choices or bounds
+stop the run before evaluation. Options on unselected rules are validated too, so
+dormant typos cannot remain hidden.
 
 The rule's **default** remains in source. A TOML value is an **override**. The
 **current value** is the override when present and otherwise the default. Lists are

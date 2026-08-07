@@ -119,13 +119,18 @@ architectural drift into a build failure.
 `fensu check` runs the rules resolved from your `select` and `ignore`
 configuration. Both take rule-code **prefixes**: `FF` is every core rule, `FFR` a
 family, `FFR3` a hundreds bucket, `FFR301` one rule; `X` is every custom rule,
-`XDB` a custom namespace, `XDB001` one custom rule. To narrow a run, adjust those
-keys rather than the command:
+`XDB` a custom namespace, `XDB001` one custom rule. Activated native packs use the
+reserved `FP` namespace: `FPDG` selects the complete Dagster policy and `FPDG024`
+selects one Dagster-native rule. To narrow a run, adjust those keys rather than the
+command:
 
 ```toml
 select = ["FFL", "FFR"]   # only layers and roles
 ignore = ["FFH007"]       # minus one rule
 ```
+
+Pack selectors are available only after activation with `rule_packs`; see
+[Native rule packs](/concepts/rule-packs).
 
 There is no inline suppression comment. When a rule genuinely does not fit, disable
 it globally, add an exact [rule exception](/concepts/configuration#exact-rule-exceptions),

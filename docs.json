@@ -38,6 +38,7 @@
           "concepts/configuration",
           "concepts/caching",
           "concepts/rule-families",
+          "concepts/rule-packs",
           "concepts/custom-rules"
         ]
       },

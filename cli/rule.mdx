@@ -1,6 +1,6 @@
 ---
 title: fensu rule
-description: "Inspect the full metadata for a single rule code, core or custom."
+description: "Inspect the full metadata for a single core, native-pack, or custom rule code."
 ---
 
 `fensu rule` prints the complete metadata for one rule: its family, severity,
@@ -40,7 +40,9 @@ The lookup is **case-insensitive**, so `fensu rule ffs131` works too.
 | Header | The code and slug. |
 | Family | The rule's [family](/concepts/rule-families). |
 | Severity | `error` or `warning`. |
-| Kind | `core` for shipped rules, `custom` for your own. |
+| Kind | `core` for the default policy, `pack` for an activated native pack, or `custom` for your own rule. |
+| Pack | The owning native pack, or `None`. |
+| Alias | The canonical core implementation used by a transparent pack alias, or `None`. |
 | Enabled by default | Whether the rule runs without being named explicitly. |
 | Source | `core`, or the file or module a custom rule was loaded from. |
 | Message | The one-sentence statement of the violated contract. |
@@ -58,8 +60,9 @@ reasons.
 ## Custom and configured rules
 
 `fensu rule` reads the whole catalogue for the current repository, so it resolves
-[custom rules](/concepts/custom-rules) once they are configured, and it can inspect
-rules that are ignored or off by default. A custom rule shows its source path:
+[custom rules](/concepts/custom-rules) once they are configured and
+[native rule packs](/concepts/rule-packs) once activated. It can inspect rules that
+are ignored or off by default. A custom rule shows its source path:
 
 ```bash
 fensu rule XAC001
@@ -91,6 +94,19 @@ Options:
 For an option without a default, `Default` is `required`. Defaults come from rule
 source; current values use a TOML override when present. `fensu rule` never writes
 either value back to configuration.
+
+An activated pack rule shows its pack and any canonical alias target:
+
+```text
+FPDGA001 parameter-annotation
+Family: annotations
+Severity: error
+Kind: pack
+Pack: dagster
+Alias: FFA001
+Enabled by default: yes
+Source: core
+```
 
 ## Options
 
