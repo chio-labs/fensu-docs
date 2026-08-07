@@ -39,7 +39,7 @@
           "concepts/caching",
           "concepts/rule-families",
           {
-            "group": "Native rule packs",
+            "group": "Native Rule Packs",
             "pages": [
               "concepts/rule-packs",
               "concepts/rule-packs/dagster"
