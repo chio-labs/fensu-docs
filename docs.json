@@ -38,7 +38,13 @@
           "concepts/configuration",
           "concepts/caching",
           "concepts/rule-families",
-          "concepts/rule-packs",
+          {
+            "group": "Native rule packs",
+            "pages": [
+              "concepts/rule-packs",
+              "concepts/rule-packs/dagster"
+            ]
+          },
           "concepts/custom-rules"
         ]
       },
