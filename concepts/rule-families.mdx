@@ -1,12 +1,13 @@
 ---
 title: Rule Families
-description: "The seven core rule families Fensu ships, what each enforces, and how rule codes are structured."
+description: "The seven core rule families, native pack namespaces, and stable rule-code structure Fensu ships."
 ---
 
 Every Fensu rule belongs to a **family**. A family groups rules by subject, gives
 you a single selector to turn the whole group on or off, and carries a letter in
-each rule's code. Fensu ships seven core families and reserves the `X` namespace
-for [custom rules](/concepts/custom-rules).
+each rule's code. Fensu ships seven core families, reserves `FP` for
+[native rule packs](/concepts/rule-packs), and reserves `X` for
+[custom rules](/concepts/custom-rules).
 
 ## Rule codes
 
@@ -24,11 +25,14 @@ Because codes are structured, any prefix is a valid
 a family, `FFS1` a hundreds bucket, `FFS120` one rule.
 
 Codes are permanent. A removed or renamed rule's code is retired forever and never
-reused, and existing rules are never renumbered. Custom rules must use the `X`
-namespace (`X` + optional uppercase letters + digits, like `XDB001`) and are
-rejected at load if they start with `FF`. See
+reused, and existing rules are never renumbered. Fensu-shipped native packs use
+`FP` plus a pack namespace, such as `FPDG024` for Dagster. Retained core aliases
+preserve the family and number after that namespace, such as `FPDGA001` for
+`FFA001`. Custom rules must use the `X` namespace (`X` + optional uppercase letters
++ digits, like `XDB001`) and are rejected at load if they start with `FF` or `FP`.
+See [Native rule packs](/concepts/rule-packs) for shipped namespaces and
 [Custom rules](/concepts/custom-rules#codes-and-namespaces) for how teams carve
-`X` sub-namespaces.
+their own `X` sub-namespaces.
 
 ## The families
 
