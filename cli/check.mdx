@@ -9,7 +9,7 @@ is the command you wire into CI.
 
 ```bash
 fensu check [paths...] [--warn] [--no-color]
-             [--cache | --no-cache] [--cache-stats]
+             [--cache | --no-cache] [--cache-stats] [--target TARGET]
 ```
 
 ## Usage
@@ -22,7 +22,8 @@ fensu check
 
 Fensu finds your [configuration](/concepts/configuration) by searching upward from
 the current directory, sorts files into the product, test, and tooling
-[scopes](/concepts/architecture-model#scopes), and applies each scope's rules.
+[scopes](/concepts/architecture-model#scopes), and applies each scope's rules. An
+explicit multi-target configuration runs every target and produces one report.
 
 ## Arguments and options
 
@@ -33,11 +34,13 @@ the current directory, sorts files into the product, test, and tooling
 | `--no-color` | Disable ANSI color in the output. |
 | `--cache` / `--no-cache` | Enable or disable persistent result caching for this run. |
 | `--cache-stats` | Write cache operation counts to stderr. |
+| `--target TARGET` | Evaluate only one named analyzer target. |
 
 Passing paths replaces the configured roots for that run. The rest of the
 configuration, including [evaluation targeting](/concepts/configuration#evaluation-targeting),
 still applies. Color is enabled automatically when the output is a terminal and
-disabled otherwise, and `--no-color` forces it off.
+disabled otherwise, and `--no-color` forces it off. With several configured
+targets, positional paths require `--target TARGET` so their owner is unambiguous.
 
 ```bash
 fensu check src/my_package/main

@@ -7,6 +7,8 @@
     "instructions": [
       "Read the Fensu Quickstart before onboarding a repository.",
       "Use fensu init --yes for an existing repository, or fensu init --yes --name NAME for an empty repository. Use --no-skills only when configuration-only initialization is explicitly required.",
+      "For repository-wide Fensu onboarding, detect and configure every confidently supported target; a detected SvelteKit project belongs in that scope alongside Python targets.",
+      "For narrowly scoped work, do not introduce unrelated analyzer targets. Existing configured targets always apply.",
       "Do not call Fensu onboarding complete until fensu skills --check succeeds."
     ]
   },
@@ -45,7 +47,13 @@
               "concepts/rule-packs/dagster"
             ]
           },
-          "concepts/custom-rules"
+          "concepts/custom-rules",
+          {
+            "group": "Additional Analyzers",
+            "pages": [
+              "concepts/analyzers/typescript-sveltekit"
+            ]
+          }
         ]
       },
       {
@@ -56,7 +64,8 @@
           "cli/init",
           "cli/map",
           "cli/rule",
-          "cli/skills"
+          "cli/skills",
+          "cli/target"
         ]
       },
       {

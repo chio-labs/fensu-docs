@@ -54,13 +54,49 @@ max_positional_args = 1
   does not require configuration and ignores `[evaluation]` targeting.
 </Note>
 
+## Named analyzer targets
+
+The flat form above remains the concise configuration for one Python project.
+Use explicit targets for multiple projects or a TypeScript/Svelte analyzer:
+
+```toml
+[targets.backend]
+analyzer = "python"
+root = "."
+roots = ["src/acme"]
+tests = ["tests"]
+select = ["FF"]
+
+[targets.web]
+analyzer = "svelte"
+root = "frontend"
+roots = ["src"]
+tests = ["tests"]
+test_layout = "mirrored"
+framework = "sveltekit"
+select = ["FW"]
+```
+
+Each target requires `analyzer` and `roots`. `root` defaults to `.` and relocates
+that target's paths relative to the configuration directory. Explicit `targets`
+cannot be mixed with legacy flat keys. `fensu check` evaluates every configured
+target unless `--target NAME` selects one.
+
+The registered analyzers are `python`, `typescript`, and `svelte`. Web-only keys
+include `test_layout`, `framework`, `ui_kit`, `shadcn`, `openapi`, and `generated`;
+the normal policy, threshold, exception, evaluation, cache, and scope keys live
+inside each target too. See [TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit)
+for detection, setup, and current boundaries.
+
 ## Validation is strict
 
 Fensu fails loudly on a bad config rather than silently ignoring it, because a
 silently dropped key is how a typo quietly disables a rule.
 
 - An unknown top-level key is rejected: `Unknown config key(s): ...`.
-- `roots` is required and must contain at least one non-empty path.
+- A flat config requires `roots`; an explicit config requires one or more named
+  targets, each with `analyzer` and `roots`.
+- Explicit `targets` cannot be mixed with legacy top-level policy keys.
 - `roots` entries must not be nested or overlapping.
 - Every configured root path must exist on disk.
 - A path may not belong to two scopes, and two scopes may not claim the same
@@ -74,9 +110,9 @@ silently dropped key is how a typo quietly disables a rule.
 - Role names under `roles` must be known role names.
 - Each `threshold_overrides` entry must define exactly `paths`, `thresholds`, and
   a non-empty `reason`, with repository-relative POSIX glob paths.
-- Each `rule_exceptions` entry must name one exact rule, one exact Python file, and
-  a non-empty `reason`. An optional `symbols` list must contain one or more
-  qualified functions when present.
+- Each `rule_exceptions` entry must name one exact rule, one exact source file for
+  its analyzer, and a non-empty `reason`. An optional `symbols` list must contain
+  one or more qualified functions or methods when present.
 - Each `rule_ignores` entry must define non-empty `rules` selectors, non-empty
   repository-relative POSIX glob `paths`, and a non-empty `reason`.
 - `[evaluation]` accepts only `include` and `exclude`; when present, each is a
@@ -88,15 +124,16 @@ silently dropped key is how a typo quietly disables a rule.
 
 | Key | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `roots` | list of strings | required | Product code scopes. No nesting. |
+| `targets` | table of named targets | none | Explicit analyzer projects; mutually exclusive with all flat keys. |
+| `roots` | list of strings | required in a flat config or target | Product code scopes. No nesting. |
 | `tests` | list of strings | `["tests"]` | Test scopes. |
 | `test_scopes` | list of strings | `["unit", "integration", "e2e"]` | Directory names allowed directly under a test root. |
 | `tooling` | list of strings | `[]` | Dev tooling scopes. |
-| `select` | list of selectors | `["FF"]` | Blocking rules to enable. |
+| `select` | list of selectors | complete analyzer policy | Blocking rules to enable. |
 | `warn` | list of selectors | `[]` | Advisory rules evaluated by `fensu check --warn`. |
 | `ignore` | list of selectors | `[]` | Rule codes to disable. |
-| `rule_paths` | list of strings | `[]` | Directories of custom rule files to load. |
-| `rule_modules` | list of strings | `[]` | Importable module names holding custom rules. |
+| `rule_paths` | list of strings | `[]` | Directories of Python custom rule files to load. |
+| `rule_modules` | list of strings | `[]` | Importable Python modules holding custom rules. |
 | `rule_packs` | list of strings | `[]` | Fensu-shipped native policies to make available. |
 | `rule_options` | rule-code tables | declared defaults | Per-rule option overrides validated against the discovered catalogue. |
 | `thresholds` | table | shipped defaults | Global threshold overrides. |
@@ -121,6 +158,7 @@ prefix of a valid code works:
 | `FFR` | One core family (here: roles). |
 | `FFR3` | One hundreds bucket (here: the `FFR3xx` layout rules). |
 | `FFR301` | Exactly one rule. |
+| `FW` | Every rule applicable to a TypeScript or Svelte target. |
 | `FP` | Every activated native-pack rule. |
 | `FPDG` | The complete activated Dagster policy. |
 | `FPDGA` | Dagster aliases of the core annotations family. |
@@ -129,16 +167,19 @@ prefix of a valid code works:
 | `XDB` | A custom namespace (every rule whose code starts with `XDB`). |
 | `XDB001` | Exactly one custom rule. |
 
-The core family letters are `FFL`, `FFR`, `FFS`, `FFN`, `FFH`, `FFT`, and `FFA`;
+The Python core family letters are `FFL`, `FFR`, `FFS`, `FFN`, `FFH`, `FFT`, and `FFA`;
 see [Rule families](/concepts/rule-families). `FP` is reserved for activated
 [native rule packs](/concepts/rule-packs). Custom selectors follow custom codes:
 `X` plus optional uppercase letters plus optional digits, so namespaces nest by
-prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)).
+prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)). Web
+analyzers use the `FW` catalogue described in
+[TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit).
 
 ### The default
 
-`select` defaults to `["FF"]`, which turns on every family. If you want all of
-Fensu's opinion, set nothing: the default already does it.
+`select` defaults to the analyzer's complete native policy: `["FF"]` for Python
+and `["FW"]` for TypeScript or Svelte. If you want all of Fensu's opinion, set
+nothing: the default already does it.
 
 Native packs are not part of that default. A pack must be named in `rule_packs`
 before its selectors become available.
@@ -225,7 +266,7 @@ Omitting `symbols` does not suppress findings owned by functions in that file. I
 `symbols` is present, it must be non-empty; `symbols = []` is rejected rather than
 silently broadening the exception to file scope.
 
-The rule, repository-relative Python file, and any qualified symbols are exact:
+The rule, repository-relative analyzer source file, and any qualified symbols are exact:
 globs, directories, line numbers, and rule prefixes are not accepted. The path and
 symbols must exist, and `fensu check` fails if either form becomes stale and
 suppresses no fault.
@@ -254,7 +295,7 @@ stale exact waiver.
 
 ## Evaluation targeting
 
-The `[evaluation]` table narrows which discovered Python files receive direct rule
+The `[evaluation]` table narrows which discovered source files receive direct rule
 execution. It is intended for gradual adoption across a large repository:
 
 ```toml
@@ -273,14 +314,14 @@ Both keys are optional, producing four cases:
 
 | Configuration | Direct evaluation targets |
 | --- | --- |
-| Neither key | Every discovered Python file. |
+| Neither key | Every discovered source file. |
 | `exclude` only | Every discovered file except excluded matches. |
 | `include` only | Only included matches. |
 | `include` and `exclude` | Included matches minus excluded matches. |
 
 Exclude always wins. Patterns are repository-relative POSIX globs: `*` stays
 within one path component and `**` crosses directories. Every include pattern
-must match a discovered Python file; unmatched excludes are allowed. A stale
+must match a discovered source file; unmatched excludes are allowed. A stale
 include or a configuration leaving zero targets fails instead of reporting a false
 green.
 

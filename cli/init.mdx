@@ -10,20 +10,24 @@ is non-interactive, so new initialization requires `--yes`.
 
 ```bash
 fensu init [--yes] [--root PATH ...] [--tests PATH ...] [--tooling PATH ...]
-            [--skills | --no-skills] [--name NAME]
+            [--skills | --no-skills] [--name NAME] [--preset sveltekit]
+            [--exclude-target NAME ...]
 ```
 
 ## What it does
 
-1. **Detects your layout.** Package roots come from `pyproject.toml` metadata
+1. **Detects your layout and analyzers.** Python package roots come from `pyproject.toml` metadata
    (hatch, setuptools, poetry, flit, uv workspaces, the project name), ruff's
    `src` setting, and a directory scan. Test paths come from pytest `testpaths`
    and `tests`/`test` directories; tooling from `scripts`, `tools`, `bin`, and
    `tasks` directories with Python files. If package metadata also names one of
    those conventional tooling directories, tooling classification wins so a path
    is never proposed in both scopes; an explicit `--root` overrides detection.
-2. **Enables the complete ruleset.** Every repository gets `select = ["FF"]`.
-   An empty repository also gets a scaffolded `src/<name>/` package plus `tests/`.
+   Fensu also detects complete SvelteKit projects and can write both analyzers as
+   named targets.
+2. **Enables each complete policy.** Python targets select `FF`; detected
+   SvelteKit targets select `FW`. An empty repository normally gets a scaffolded
+   Python `src/<name>/` package plus `tests/`.
 3. **Writes `fensu.toml`** and updates your `.gitignore` to cover Fensu's
    [cache directory](/cli/check#caching).
 4. **Measures current drift** by running the starting ruleset once and printing
@@ -42,10 +46,25 @@ fensu init [--yes] [--root PATH ...] [--tests PATH ...] [--tooling PATH ...]
 | `--tooling PATH` | Use these tooling paths. Repeatable. |
 | `--skills` / `--no-skills` | Explicitly install or skip agent skill files. `--yes` installs them when neither is supplied. |
 | `--name NAME` | Package name for an empty-repository scaffold. Only valid when no Python package is detected. |
+| `--preset sveltekit` | Initialize an explicit SvelteKit target instead of a Python scaffold. |
+| `--exclude-target NAME` | Exclude one or more detected SvelteKit targets from the initialization plan. |
 
 `--skills` and `--no-skills` are mutually exclusive. `--root`, `--tests`, and
 `--tooling` only apply when a codebase is detected; `--name` only applies when
 none is.
+
+## SvelteKit detection
+
+Repository-wide onboarding includes each confidently detected SvelteKit project.
+Detection requires a `svelte.config.*` file, `package.json` with `@sveltejs/kit`,
+`tsconfig.json` or `jsconfig.json`, and `src/` in the same target directory. A
+mixed repository receives explicit Python and Svelte targets. Generic TypeScript
+files alone do not trigger automatic web policy.
+
+Use `--exclude-target NAME` when the onboarding request deliberately excludes a
+detected web project. See
+[TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit) for manual
+configuration and gradual adoption.
 
 ## An existing repository
 

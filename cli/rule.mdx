@@ -9,7 +9,7 @@ it to understand a code you saw in [`fensu check`](/cli/check) output, or to rea
 what a rule claims before you enable or disable it.
 
 ```bash
-fensu rule CODE [--color MODE]
+fensu rule CODE [--color MODE] [--target TARGET]
 ```
 
 ## Usage
@@ -32,6 +32,12 @@ Remediation: Extract a named helper when the transformation has a coherent purpo
 ```
 
 The lookup is **case-insensitive**, so `fensu rule ffs131` works too.
+When multiple analyzer targets are configured, select the catalogue and policy
+context explicitly:
+
+```bash
+fensu rule FWA001 --target web
+```
 
 ## Fields
 
@@ -113,6 +119,7 @@ Source: core
 | Option | Values | Default | Purpose |
 | --- | --- | --- | --- |
 | `--color` | `auto`, `always`, `never` | `auto` | ANSI color behavior. Respects `NO_COLOR`. |
+| `--target` | configured target name | automatic for one target | Select the analyzer catalogue and target-local policy. |
 
 ## Exit codes
 
