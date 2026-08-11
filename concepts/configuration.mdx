@@ -73,8 +73,8 @@ root = "frontend"
 roots = ["src"]
 tests = ["tests"]
 test_layout = "mirrored"
-framework = "sveltekit"
-select = ["FW"]
+rule_packs = ["sveltekit"]
+select = ["FPSK"]
 ```
 
 Each target requires `analyzer` and `roots`. `root` defaults to `.` and relocates
@@ -83,10 +83,12 @@ cannot be mixed with legacy flat keys. `fensu check` evaluates every configured
 target unless `--target NAME` selects one.
 
 The registered analyzers are `python`, `typescript`, and `svelte`. Web-only keys
-include `test_layout`, `framework`, `ui_kit`, `shadcn`, `openapi`, and `generated`;
-the normal policy, threshold, exception, evaluation, cache, and scope keys live
-inside each target too. See [TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit)
-for detection, setup, and current boundaries.
+include `test_layout`, `ui_kit`, `shadcn`, `openapi`, and `generated`; the normal
+policy, threshold, exception, evaluation, cache, and scope keys live inside each
+target too. The activated rule pack, rather than a separate framework setting,
+controls SvelteKit policy. See
+[TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit) for detection,
+setup, and current boundaries.
 
 ## Validation is strict
 
@@ -158,8 +160,9 @@ prefix of a valid code works:
 | `FFR` | One core family (here: roles). |
 | `FFR3` | One hundreds bucket (here: the `FFR3xx` layout rules). |
 | `FFR301` | Exactly one rule. |
-| `FW` | Every rule applicable to a TypeScript or Svelte target. |
 | `FP` | Every activated native-pack rule. |
+| `FPTS` | The complete activated TypeScript policy. |
+| `FPSK` | The complete activated SvelteKit policy. |
 | `FPDG` | The complete activated Dagster policy. |
 | `FPDGA` | Dagster aliases of the core annotations family. |
 | `FPDG022` | Exactly one Dagster-native policy. |
@@ -172,17 +175,15 @@ see [Rule families](/concepts/rule-families). `FP` is reserved for activated
 [native rule packs](/concepts/rule-packs). Custom selectors follow custom codes:
 `X` plus optional uppercase letters plus optional digits, so namespaces nest by
 prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)). Web
-analyzers use the `FW` catalogue described in
+analyzers use the activated `FPTS` or `FPSK` catalogue described in
 [TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit).
 
 ### The default
 
-`select` defaults to the analyzer's complete native policy: `["FF"]` for Python
-and `["FW"]` for TypeScript or Svelte. If you want all of Fensu's opinion, set
-nothing: the default already does it.
-
-Native packs are not part of that default. A pack must be named in `rule_packs`
-before its selectors become available.
+`select` defaults to `["FF"]` for Python and `["FP"]` for TypeScript or Svelte.
+For web targets, `FP` selects every activated pack. A web pack must be named in
+`rule_packs` before its selectors become available; generated SvelteKit targets
+activate `sveltekit` and select `FPSK` explicitly.
 
 ### Run only some families
 
@@ -484,18 +485,31 @@ behavior outside these four categories, write a [custom rule](/concepts/custom-r
 
 ## Native rule packs
 
-`rule_packs` activates Fensu-shipped Rust policies by registered name. The
-currently shipped pack is `dagster`:
+`rule_packs` activates Fensu-shipped Rust policies by registered name. Fensu
+currently ships `dagster`, `typescript`, and `sveltekit` packs:
 
 ```toml
 rule_packs = ["dagster"]
 select = ["FPDG"]
 ```
 
+```toml
+rule_packs = ["typescript"]
+select = ["FPTS"]
+```
+
+```toml
+rule_packs = ["sveltekit"]
+select = ["FPSK"]
+```
+
 The Dagster pack is a standalone architecture policy containing native framework
 rules and transparent aliases of retained core rules. See the
 [Dagster rule pack](/concepts/rule-packs/dagster) for its repository shape, codes,
 alias behavior, and autoload option.
+The TypeScript pack contains framework-independent web policy. The SvelteKit pack
+is standalone and uses direct aliases of applicable TypeScript rules so users
+activate and select only `FPSK`.
 
 ## Custom rule loading
 

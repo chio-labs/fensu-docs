@@ -13,8 +13,9 @@ fensu target add NAME --preset sveltekit --path PATH
 fensu target add web --preset sveltekit --path frontend
 ```
 
-The generated target uses the native Svelte analyzer, `framework = "sveltekit"`,
-`roots = ["src"]`, a mirrored test layout, and `select = ["FW"]`.
+The generated target uses the native Svelte analyzer, activates
+`rule_packs = ["sveltekit"]`, uses `roots = ["src"]` with a mirrored test
+layout, and selects `FPSK`.
 
 ## Requirements
 

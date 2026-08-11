@@ -26,8 +26,9 @@ fensu init [--yes] [--root PATH ...] [--tests PATH ...] [--tooling PATH ...]
    Fensu also detects complete SvelteKit projects and can write both analyzers as
    named targets.
 2. **Enables each complete policy.** Python targets select `FF`; detected
-   SvelteKit targets select `FW`. An empty repository normally gets a scaffolded
-   Python `src/<name>/` package plus `tests/`.
+   SvelteKit targets activate the `sveltekit` rule pack and select `FPSK`. An
+   empty repository normally gets a scaffolded Python `src/<name>/` package plus
+   `tests/`.
 3. **Writes `fensu.toml`** and updates your `.gitignore` to cover Fensu's
    [cache directory](/cli/check#caching).
 4. **Measures current drift** by running the starting ruleset once and printing
