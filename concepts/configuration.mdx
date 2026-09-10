@@ -57,7 +57,7 @@ max_positional_args = 1
 ## Named analyzer targets
 
 The flat form above remains the concise configuration for one Python project.
-Use explicit targets for multiple projects or a TypeScript/Svelte analyzer:
+Use explicit targets for multiple projects or a Rust, TypeScript, or Svelte analyzer:
 
 ```toml
 [targets.backend]
@@ -75,6 +75,14 @@ tests = ["tests"]
 test_layout = "mirrored"
 rule_packs = ["sveltekit"]
 select = ["FPSK"]
+
+[targets.rust]
+analyzer = "rust"
+roots = ["crates"]
+tests = []
+tooling = ["crates/project-tools"]
+rule_packs = ["rust"]
+select = ["FPRS"]
 ```
 
 Each target requires `analyzer` and `roots`. `root` defaults to `.` and relocates
@@ -82,13 +90,17 @@ that target's paths relative to the configuration directory. Explicit `targets`
 cannot be mixed with legacy flat keys. `fensu check` evaluates every configured
 target unless `--target NAME` selects one.
 
-The registered analyzers are `python`, `typescript`, and `svelte`. Web-only keys
+The registered analyzers are `python`, `rust`, `typescript`, and `svelte`. Web-only keys
 include `test_layout`, `ui_kit`, `shadcn`, `openapi`, and `generated`; the normal
 policy, threshold, exception, evaluation, cache, and scope keys live inside each
 target too. The activated rule pack, rather than a separate framework setting,
 controls SvelteKit policy. See
 [TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit) for detection,
 setup, and current boundaries.
+
+Rust targets use Cargo to discover workspace members, package identities, and source targets.
+They are configured entirely in `fensu.toml`; use ordinary `rule_options` for per-rule
+adjustments. See [Rust](/concepts/analyzers/rust) for setup and the supported options.
 
 ## Validation is strict
 
@@ -163,6 +175,7 @@ prefix of a valid code works:
 | `FP` | Every activated native-pack rule. |
 | `FPTS` | The complete activated TypeScript policy. |
 | `FPSK` | The complete activated SvelteKit policy. |
+| `FPRS` | The complete activated Rust policy. |
 | `FPDG` | The complete activated Dagster policy. |
 | `FPDGA` | Dagster aliases of the core annotations family. |
 | `FPDG022` | Exactly one Dagster-native policy. |
@@ -176,12 +189,13 @@ see [Rule families](/concepts/rule-families). `FP` is reserved for activated
 `X` plus optional uppercase letters plus optional digits, so namespaces nest by
 prefix (see [Custom rules](/concepts/custom-rules#codes-and-namespaces)). Web
 analyzers use the activated `FPTS` or `FPSK` catalogue described in
-[TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit).
+[TypeScript and SvelteKit](/concepts/analyzers/typescript-sveltekit). Rust uses the
+activated `FPRS` catalogue described in [Rust](/concepts/analyzers/rust).
 
 ### The default
 
-`select` defaults to `["FF"]` for Python and `["FP"]` for TypeScript or Svelte.
-For web targets, `FP` selects every activated pack. A web pack must be named in
+`select` defaults to `["FF"]` for Python and `["FP"]` for Rust, TypeScript, or Svelte.
+For native targets, `FP` selects every activated pack. A pack must be named in
 `rule_packs` before its selectors become available; generated SvelteKit targets
 activate `sveltekit` and select `FPSK` explicitly.
 

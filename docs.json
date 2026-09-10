@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Fensu",
-  "description": "Fensu enforces architectural boundaries, repository structure, code shape, and test conventions in Python projects.",
+  "description": "Fensu enforces architectural boundaries, repository structure, code shape, and test conventions across Python, Rust, TypeScript, and Svelte projects.",
   "markdown": {
     "instructions": [
       "Read the Fensu Quickstart before onboarding a repository.",
@@ -51,6 +51,7 @@
           {
             "group": "Additional Analyzers",
             "pages": [
+              "concepts/analyzers/rust",
               "concepts/analyzers/typescript-sveltekit"
             ]
           }
