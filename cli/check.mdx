@@ -29,7 +29,7 @@ explicit multi-target configuration runs every target and produces one report.
 
 | Argument | Description |
 | --- | --- |
-| `paths...` | Optional. Use these paths instead of the configured `roots` for this run. |
+| `paths...` | Optional for Python and web targets. Use these paths instead of configured `roots`. Rust targets use Cargo discovery and reject positional paths. |
 | `--warn` | Also evaluate and report rules configured in `warn`. Warnings never make the command fail. |
 | `--no-color` | Disable ANSI color in the output. |
 | `--cache` / `--no-cache` | Enable or disable persistent result caching for this run. |
@@ -124,7 +124,7 @@ configuration. Both take rule-code **prefixes**: `FF` is every core rule, `FFR` 
 family, `FFR3` a hundreds bucket, `FFR301` one rule; `X` is every custom rule,
 `XDB` a custom namespace, `XDB001` one custom rule. Activated native packs use the
 reserved `FP` namespace: `FPDG` selects the complete Dagster policy and `FPDG022`
-selects one Dagster-native rule. To narrow a run, adjust those keys rather than the
+selects one Dagster-native rule; `FPRS` selects the complete Rust policy. To narrow a run, adjust those keys rather than the
 command:
 
 ```toml

@@ -35,8 +35,8 @@ pack's reference page.
 ## Codes and namespaces
 
 Fensu reserves `FP` for shipped native packs. Each pack owns a namespace beneath
-that prefix. The Dagster, TypeScript, and SvelteKit packs own `FPDG`, `FPTS`, and
-`FPSK`.
+that prefix. The Dagster, Rust, TypeScript, and SvelteKit packs own `FPDG`, `FPRS`,
+`FPTS`, and `FPSK`.
 
 Pack-native rules append their numeric identity directly, such as `FPDG022`.
 Retained core aliases preserve the core family and number after the pack namespace:
@@ -78,5 +78,9 @@ alias target for an activated identity.
   <Card title="TypeScript and SvelteKit" icon="code" href="/concepts/analyzers/typescript-sveltekit">
     Framework-independent TypeScript policy and a standalone SvelteKit policy
     with transparent TypeScript aliases.
+  </Card>
+  <Card title="Rust" icon="gear" href="/concepts/analyzers/rust">
+    Native Cargo workspace analysis with 117 layout, dependency, naming, shape,
+    hygiene, and test-convention rules.
   </Card>
 </CardGroup>
