@@ -21,6 +21,9 @@ rule_packs = ["rust"]
 select = ["FPRS"]
 ```
 
+`rule_packs = ["rust"]` and `select = ["FPRS"]` are the Rust defaults. Keeping
+them explicit makes the active policy clear in a multi-target repository.
+
 Then run:
 
 ```bash
@@ -135,7 +138,7 @@ intentional_layout_paths = ["crates/app/src/generated"]
 ```
 
 Empty crate, domain, and role lists use automatic discovery. Configured paths must
-be canonical target-relative POSIX paths. Intentional-layout paths skip aggregate
+be canonical repository-relative POSIX paths within the target root. Intentional-layout paths skip aggregate
 layout checks for explicit subtrees while preserving per-file checks.
 
 ## Cargo metadata and caching
@@ -146,4 +149,4 @@ For a lock-free workspace, it reads declared dependencies without creating a
 lockfile.
 
 If Cargo metadata cannot be read, Fensu reports a setup diagnostic and does not cache
-the result. This remains true even when rule selection would hide that diagnostic.
+the result. The result remains uncached even when rule selection hides that diagnostic.

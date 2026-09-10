@@ -195,9 +195,10 @@ activated `FPRS` catalogue described in [Rust](/concepts/analyzers/rust).
 ### The default
 
 `select` defaults to `["FF"]` for Python and `["FP"]` for Rust, TypeScript, or Svelte.
-For native targets, `FP` selects every activated pack. A pack must be named in
-`rule_packs` before its selectors become available; generated SvelteKit targets
-activate `sveltekit` and select `FPSK` explicitly.
+For native targets, `FP` selects every activated pack. Rust targets activate the
+`rust` pack automatically. Web packs must be named in `rule_packs` before their
+selectors become available; generated SvelteKit targets activate `sveltekit` and
+select `FPSK` explicitly.
 
 ### Run only some families
 
