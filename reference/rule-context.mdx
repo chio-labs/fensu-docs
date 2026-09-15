@@ -117,6 +117,28 @@ dynamic imports are not represented.
 `ImportResolution`, and optional target node. Graph identities include analyzer and
 source-kind ownership so they remain safe as additional analyzers gain graphs.
 
+## `ctx.rust`
+
+For Rust targets, a versioned immutable workspace fact view transferred from the
+native analyzer. It contains no `syn` or Cargo metadata objects.
+
+| Call | Returns | Purpose |
+| --- | --- | --- |
+| `crates` | `tuple[RustCrateFact, ...]` | All Cargo workspace package, target and dependency identities. |
+| `files` | `tuple[RustFileFacts, ...]` | All selected Rust file, module, source, item and `use` facts. |
+| `crate(identity)` | `RustCrateFact \| None` | One focused crate lookup by stable workspace identity. |
+| `file(file_or_path)` | `RustFileFacts \| None` | One focused file lookup by `File` or `ProjectPath`. |
+
+`RustItemFact` uses `RustItemKind` and `RustVisibility`, preserves derives and
+implementation targets, and carries a stable `SourceLocation`. `RustUseFact`
+preserves authored parts, source and target modules, optional target file and crate,
+and a `RustUseResolution` of `RESOLVED`, `CRATE`, `EXTERNAL`, or `UNRESOLVED`.
+`RustFileFacts.parse_error` remains explicit when source cannot be parsed.
+
+Each broad or focused call records its answer for subject-aware cache replay. Use a
+focused `file()` or `crate()` lookup when unrelated source or Cargo changes should
+not invalidate a cached result.
+
 ## `ctx.text`, `ctx.syntax`, `ctx.relations`
 
 Source text, opaque syntax identities, and syntax relationships for the current
@@ -136,6 +158,11 @@ file.
 
 The zone protocols are `FactAnalysis`, `ProjectAnalysis`, `TextAnalysis`,
 `SyntaxAnalysis`, and `RelationAnalysis`, all exported from `fensu`.
+
+The table above describes the Python analysis zones. Serialized Rust rules use
+`ctx.rust`, `ctx.project.tree`, `ctx.source`, and stable locations. `ctx.graph`,
+`ctx.syntax`, and `ctx.relations` are unavailable because parser implementation
+objects are not part of the Rust authoring contract.
 
 ## Fault construction
 
@@ -288,6 +315,18 @@ are frozen dataclasses; inspect exact fields with your editor's type information
 | `AuthoredImport` | Import spelling before project resolution. |
 | `ImportEdge` | Authored import plus explicit resolution result. |
 | `ImportCycle` | One statically proven strongly connected component. |
+
+**Rust facts**
+
+| Model | Describes |
+| --- | --- |
+| `RustWorkspaceFacts` | Versioned workspace crates and selected Rust files. |
+| `RustCrateFact` | Cargo package identity, manifest, library, targets and dependencies. |
+| `RustTargetFact` | Stable Cargo target identity, kinds, source root and entry path. |
+| `RustDependencyFact` | Cargo package/source name, dependency kinds and optional local crate. |
+| `RustFileFacts` | Source, module identity, parse result, items and authored uses. |
+| `RustItemFact` | Function, struct, enum, trait, implementation or module declaration. |
+| `RustUseFact` | Authored `use` path and explicit resolution evidence. |
 
 **Test facts**
 
