@@ -48,6 +48,7 @@
             ]
           },
           "concepts/custom-rules",
+          "concepts/repository-rules",
           {
             "group": "Additional Analyzers",
             "pages": [

@@ -11,6 +11,7 @@ never from internal package paths.
 ```python
 def check(*, file: File, ctx: RuleContext) -> list[Fault]: ...
 def check(*, project: Project, ctx: RuleContext) -> list[Fault]: ...
+def check(*, repository: Repository, ctx: RuleContext) -> list[Fault]: ...
 ```
 
 The context groups its surface into current-file facts, project/tree facts, an
@@ -173,6 +174,24 @@ Broad `files` and focused `file()` calls record their exact answers for
 subject-aware cache replay. Tree and graph calls made during the same invocation
 record their own query-specific dependencies.
 
+## `ctx.targets`
+
+Repository rules use `ctx.targets` instead of an unqualified target context.
+`all()` returns every configured `RuleTargetFacts` handle in target-name order;
+`named(name)` returns one exact handle or `None`.
+
+Each handle exposes its stable `Target` identity, target-local `tree` and `graph`,
+and the typed `python`, `rust`, or `web` workspace facts owned by its analyzer.
+`repository_path(file_or_path)` and `repository_location(location)` translate
+target-local evidence before constructing a repository-relative diagnostic.
+Wrong-analyzer access and access to an analyzer omitted from the active rule's
+`analyzers` fail closed.
+
+Repository contexts have no current file, source, `ctx.project`, or unqualified
+analyzer zones. Their queries use a distinct repository requester for cache replay.
+See [Repository rules](/concepts/repository-rules) for the complete execution and
+cache model.
+
 ## `ctx.text`, `ctx.syntax`, `ctx.relations`
 
 Source text, opaque syntax identities, and syntax relationships for the current
@@ -218,6 +237,11 @@ file-fact object. `path_fault()` therefore requires an explicit project-relative
 path, and `fault_for()` requires an absolute path confined to the analyzed project.
 `fault_at()` accepts a `SourceLocation` or `SourceRange`; a bare `SyntaxHandle`
 cannot be resolved without a current file analysis.
+
+During a repository-rule invocation, `path_fault()` accepts a repository-relative
+path and may omit it to report against the repository subject `"."`.
+`fault_at()` accepts a repository-relative `SourceLocation`; translate a
+target-local location with `target.repository_location(...)` first.
 
 ## Position and roles
 
@@ -343,6 +367,10 @@ are frozen dataclasses; inspect exact fields with your editor's type information
 | --- | --- |
 | `File` | Immutable identity of one discovered source file. |
 | `Project` | Immutable identity of one analyzed project. |
+| `Repository` | Immutable identity of one configured multi-target repository. |
+| `Target` | Stable name, analyzer, and repository-relative root for one target. |
+| `RuleTargetFacts` | One named target's identity, tree, graph, typed facts, and path translators. |
+| `RepositoryTargetFacts` | Deterministic `all()` and `named()` target lookup. |
 | `ProjectPath` | Normalized, confined, project-relative POSIX path. |
 | `ProjectTree` | Deterministic discovered paths, files, and positions. |
 | `FilePosition` | Complete analyzer-neutral layout position for one file. |
@@ -363,6 +391,13 @@ are frozen dataclasses; inspect exact fields with your editor's type information
 | `RustFileFacts` | Source, module identity, parse result, items and authored uses. |
 | `RustItemFact` | Function, struct, enum, trait, implementation or module declaration. |
 | `RustUseFact` | Authored `use` path and explicit resolution evidence. |
+
+**Python repository facts**
+
+| Model | Describes |
+| --- | --- |
+| `PythonWorkspaceFacts` | Versioned broad and focused Python file queries for one named target. |
+| `PythonFileFacts` | One Python file's identity, source, and Fensu-owned fact, text, syntax, and relation zones. |
 
 **Web facts**
 

@@ -24,6 +24,8 @@ Fensu finds your [configuration](/concepts/configuration) by searching upward fr
 the current directory, sorts files into the product, test, and tooling
 [scopes](/concepts/architecture-model#scopes), and applies each scope's rules. An
 explicit multi-target configuration runs every target and produces one report.
+Selected [repository rules](/concepts/repository-rules) then run exactly once over
+that complete target registry.
 
 ## Arguments and options
 
@@ -34,7 +36,7 @@ explicit multi-target configuration runs every target and produces one report.
 | `--no-color` | Disable ANSI color in the output. |
 | `--cache` / `--no-cache` | Enable or disable persistent result caching for this run. |
 | `--cache-stats` | Write cache operation counts to stderr. |
-| `--target TARGET` | Evaluate only one named analyzer target. |
+| `--target TARGET` | Evaluate only one named analyzer target; repository rules are skipped. |
 
 Passing paths replaces the configured roots for that run. The rest of the
 configuration, including [evaluation targeting](/concepts/configuration#evaluation-targeting),

@@ -87,8 +87,10 @@ select = ["FPRS"]
 
 Each target requires `analyzer` and `roots`. `root` defaults to `.` and relocates
 that target's paths relative to the configuration directory. Explicit `targets`
-cannot be mixed with legacy flat keys. `fensu check` evaluates every configured
-target unless `--target NAME` selects one.
+cannot be mixed with legacy flat keys; the top-level `repository_rules` table is
+the one repository-owned policy exception. `fensu check` evaluates every configured
+target unless `--target NAME` selects one. See
+[Repository rules](/concepts/repository-rules) for aggregate cross-target policy.
 
 The registered analyzers are `python`, `rust`, `typescript`, and `svelte`. Web-only keys
 include `test_layout`, `ui_kit`, `shadcn`, `openapi`, and `generated`; the normal
@@ -110,7 +112,8 @@ silently dropped key is how a typo quietly disables a rule.
 - An unknown top-level key is rejected: `Unknown config key(s): ...`.
 - A flat config requires `roots`; an explicit config requires one or more named
   targets, each with `analyzer` and `roots`.
-- Explicit `targets` cannot be mixed with legacy top-level policy keys.
+- Explicit `targets` cannot be mixed with legacy top-level policy keys. They may be
+  accompanied by top-level `repository_rules`.
 - `roots` entries must not be nested or overlapping.
 - Every configured root path must exist on disk.
 - A path may not belong to two scopes, and two scopes may not claim the same
@@ -139,6 +142,7 @@ silently dropped key is how a typo quietly disables a rule.
 | Key | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `targets` | table of named targets | none | Explicit analyzer projects; mutually exclusive with all flat keys. |
+| `repository_rules` | table | none | Aggregate custom-rule policy for explicit named targets. |
 | `roots` | list of strings | required in a flat config or target | Product code scopes. No nesting. |
 | `tests` | list of strings | `["tests"]` | Test scopes. |
 | `test_scopes` | list of strings | `["unit", "integration", "e2e"]` | Directory names allowed directly under a test root. |
