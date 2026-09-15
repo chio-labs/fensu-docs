@@ -100,9 +100,11 @@ unsupported path objects. `FilePosition` includes `path`, `analyzer`, `source_ki
 
 ## `ctx.graph`
 
-For Python targets, an immutable architecture graph resolved from static imports
-and authoritative discovered modules. Unresolved imports remain explicit and
-dynamic imports are not represented.
+For Python, TypeScript, and Svelte targets, an immutable architecture graph
+resolved from static imports and authoritative discovered modules. Unresolved
+imports remain explicit and dynamic imports are not represented. Web graph
+resolution reuses the native analyzer's static TypeScript, JavaScript, SvelteKit,
+and configured alias resolution.
 
 | Call | Returns | Purpose |
 | --- | --- | --- |
@@ -139,6 +141,38 @@ Each broad or focused call records its answer for subject-aware cache replay. Us
 focused `file()` or `crate()` lookup when unrelated source or Cargo changes should
 not invalidate a cached result.
 
+## `ctx.web`
+
+For TypeScript and Svelte targets, a versioned immutable fact view transferred from
+the native analyzers. It contains no parser-library nodes and does not require
+Node.
+
+| Call | Returns | Purpose |
+| --- | --- | --- |
+| `files` | `tuple[WebFileFacts, ...]` | All discovered direct, support, excluded, and generated web source facts. |
+| `file(file_or_path)` | `WebFileFacts \| None` | One focused file lookup by `File` or `ProjectPath`. |
+
+`WebFileFacts` exposes its analyzer, `WebSourceKind`, `WebSourcePurpose`, module,
+source root, scope, authored source, optional parse error, and immutable imports,
+functions, classes, models, bindings, calls, resources, re-exports, and export
+counts. `WebImportFact.target` is a `File` only when the native analyzer proves a
+project-local destination. Use `ctx.graph` for resolved dependency and dependent
+queries.
+
+`syntax_handles` contains stable Fensu-owned `WebSyntaxHandle` byte ranges for
+imports, declarations, calls, resources, re-exports, Svelte scripts, and runes.
+Pass one to `WebFileFacts.text(handle)` to retrieve its authored text without
+receiving an analyzer AST.
+
+On Svelte targets, `WebFileFacts.svelte` is a `SvelteFileFacts` extension when the
+file is a component or state module. It records script contexts, recognized
+top-level runes, component markup, route identity, and state-module identity.
+TypeScript-only targets do not require this extension.
+
+Broad `files` and focused `file()` calls record their exact answers for
+subject-aware cache replay. Tree and graph calls made during the same invocation
+record their own query-specific dependencies.
+
 ## `ctx.text`, `ctx.syntax`, `ctx.relations`
 
 Source text, opaque syntax identities, and syntax relationships for the current
@@ -160,9 +194,11 @@ The zone protocols are `FactAnalysis`, `ProjectAnalysis`, `TextAnalysis`,
 `SyntaxAnalysis`, and `RelationAnalysis`, all exported from `fensu`.
 
 The table above describes the Python analysis zones. Serialized Rust rules use
-`ctx.rust`, `ctx.project.tree`, `ctx.source`, and stable locations. `ctx.graph`,
-`ctx.syntax`, and `ctx.relations` are unavailable because parser implementation
-objects are not part of the Rust authoring contract.
+`ctx.rust`, `ctx.project.tree`, `ctx.source`, and stable locations. Serialized web
+rules use `ctx.web`, `ctx.graph`, `ctx.project.tree`, `ctx.source`, and
+`WebSyntaxHandle`. The generic `ctx.syntax` and `ctx.relations` zones are
+unavailable because parser implementation objects are not part of native-analyzer
+authoring contracts.
 
 ## Fault construction
 
@@ -327,6 +363,24 @@ are frozen dataclasses; inspect exact fields with your editor's type information
 | `RustFileFacts` | Source, module identity, parse result, items and authored uses. |
 | `RustItemFact` | Function, struct, enum, trait, implementation or module declaration. |
 | `RustUseFact` | Authored `use` path and explicit resolution evidence. |
+
+**Web facts**
+
+| Model | Describes |
+| --- | --- |
+| `WebWorkspaceFacts` | Versioned TypeScript or Svelte target facts. |
+| `WebFileFacts` | One discovered web source, its semantic facts, source, and parse result. |
+| `WebImportFact` | Authored import bindings, flags, location, and optional resolved target. |
+| `WebFunctionFact` | Function ownership, annotations, return type, and structural metrics. |
+| `WebClassFact` | Class identity, export status, and error-class classification. |
+| `WebModelFact` | Interface or type-literal model shape and readonly evidence. |
+| `WebBindingFact` | Top-level binding and optional initializer call. |
+| `WebCallFact` | Named call, lexical function owner, ancestors, and cleanup evidence. |
+| `WebResourceFact` | Statically recognized resource family, binding, and call ancestry. |
+| `WebSyntaxHandle` | Fensu-owned kind, name, location, and stable source byte range. |
+| `SvelteFileFacts` | Component, route, state-module, script, and rune extensions. |
+| `SvelteScriptFact` | One module or instance script block. |
+| `SvelteRuneFact` | One recognized module-owned rune and source location. |
 
 **Test facts**
 

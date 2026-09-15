@@ -105,8 +105,71 @@ also reads literal SvelteKit `kit.alias` values. When a required alias is dynami
 Fensu fails with a configuration diagnostic rather than guessing. A missing
 generated `.svelte-kit/tsconfig.json` is accepted on a fresh checkout.
 
-Python custom rules and `fensu map` remain Python analyzer features. Web targets
-use the shipped native `typescript` or `sveltekit` catalogue.
+## Custom web rules
+
+Python-authored custom rules can extend a TypeScript or Svelte target without
+changing its CLI, configuration, selectors, or policy model. Declare analyzer
+applicability on the normal `@rule` decorator:
+
+```python
+from fensu import AnalyzerId, Family, Fault, File, RuleContext, rule
+
+
+@rule(
+    code="XWEB001",
+    family=Family.CUSTOM,
+    slug="resolved-import-boundary",
+    message="Import crosses the configured boundary",
+    analyzers=(AnalyzerId.TYPESCRIPT,),
+    cacheable=True,
+)
+def resolved_import_boundary(*, file: File, ctx: RuleContext) -> list[Fault]:
+    facts = ctx.web.file(file)
+    if facts is None:
+        return []
+    return [
+        ctx.fault_at(location=edge.location)
+        for edge in ctx.graph.imports(file)
+        if edge.target is not None and edge.target.role == "_state"
+    ]
+```
+
+Configure it like any other custom rule:
+
+```toml
+[targets.web]
+analyzer = "typescript"
+roots = ["src"]
+tests = ["tests"]
+tooling = []
+rule_paths = ["rules/web.py"]
+select = ["FPTS", "XWEB001"]
+```
+
+`ctx.web` exposes immutable Fensu-owned facts for TypeScript, JavaScript, and
+Svelte sources. These include source kinds, resolved import targets, functions,
+classes, models, bindings, calls, resources, exports, source locations, and stable
+text handles. `ctx.graph` exposes the same resolved imports through the common
+architecture graph, including `tsconfig.json`, `jsconfig.json`, `$lib`, and
+literal SvelteKit alias resolution.
+
+Svelte files add `SvelteFileFacts` for component markup, route identity, script
+contexts, and runes. Svelte state modules such as `session.svelte.ts` are marked
+separately and expose only recognized top-level initializer runes; nested calls
+are not promoted to module-owned state.
+
+File rules run once per selected source. A typed `Project` callback runs once for
+the target and can query `ctx.web.files` and `ctx.project.tree`. Use focused
+`ctx.web.file(...)`, tree, or graph queries when unrelated edits should preserve a
+cached result. Every query records its actual answer for cache replay.
+
+Web parsing and built-in rules always remain native and Node-free. Fensu starts a
+bounded Python host only when configured custom sources and an active `X` selector
+require hosted resolution. Native-only, unselected, and custom selections whose
+selector prefixes are wholly covered by ignore prefixes remain Python-free. Actual
+rule applicability is resolved inside the host. Custom diagnostics then pass
+through the normal warnings, ignores, exceptions, rendering, and exit-code
+handling. `fensu map` remains a Python analyzer feature.
 
 ## Gradual adoption
 
