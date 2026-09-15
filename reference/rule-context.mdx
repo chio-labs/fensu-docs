@@ -9,12 +9,14 @@ public protocols, handles, locations, facts, and dependency models from `fensu`,
 never from internal package paths.
 
 ```python
-def check(*, module: ast.Module, ctx: RuleContext) -> list[Fault]: ...
+def check(*, file: File, ctx: RuleContext) -> list[Fault]: ...
+def check(*, project: Project, ctx: RuleContext) -> list[Fault]: ...
 ```
 
-The context groups its surface into five analysis zones plus fault construction,
-position, AST helpers, and configuration. Every method is a convenience: a rule may
-ignore the context and walk `module` directly when it needs unrestricted AST access.
+The context groups its surface into current-file facts, project/tree facts, an
+architecture graph, text and syntax analysis, fault construction, position helpers,
+and configuration. Legacy Python callbacks may ignore the context and walk their
+`ast.Module` directly when they need unrestricted Python AST access.
 
 ## `ctx.facts`
 
@@ -75,6 +77,46 @@ whose result depends on the query as `requester`, normally `ctx.path`.
   [cacheability verification](/concepts/custom-rules#keeping-custom-rules-cacheable).
 </Warning>
 
+### `ctx.project.tree`
+
+An immutable, deterministic view of the authoritative discovered project. It does
+not perform arbitrary filesystem discovery. Every query records its exact answer
+against the active file or project-rule requester.
+
+| Call | Returns | Purpose |
+| --- | --- | --- |
+| `paths` | `tuple[ProjectPath, ...]` | All discovered files and directories. |
+| `files` | `tuple[File, ...]` | All discovered source identities. |
+| `children(path=".")` | `tuple[ProjectPath, ...]` | Immediate discovered children. |
+| `descendants(path=".")` | `tuple[ProjectPath, ...]` | All discovered descendants. |
+| `glob(pattern)` | `tuple[ProjectPath, ...]` | Discovered paths matching a confined POSIX glob. |
+| `files_under(path=".")` | `tuple[File, ...]` | Discovered files at or beneath a path. |
+| `position(path)` | `FilePosition \| None` | Analyzer, scope, module/package, domain, role, and entry-point facts for a file. |
+
+`ProjectPath` rejects absolute paths, parent traversal, Windows path spellings, and
+unsupported path objects. `FilePosition` includes `path`, `analyzer`, `source_kind`,
+`scope`, `scope_root`, `module`, `package`, `domain_parts`, `role`, `role_depth`,
+`is_entry_module`, and `is_main_module`.
+
+## `ctx.graph`
+
+For Python targets, an immutable architecture graph resolved from static imports
+and authoritative discovered modules. Unresolved imports remain explicit and
+dynamic imports are not represented.
+
+| Call | Returns | Purpose |
+| --- | --- | --- |
+| `nodes` | `tuple[ModuleNode, ...]` | Every discovered graph node. |
+| `node(file_or_path)` | `ModuleNode \| None` | One focused module lookup. |
+| `imports(node_or_file_or_path)` | `tuple[ImportEdge, ...]` | Authored imports and their resolution status. |
+| `dependencies(node_or_file_or_path)` | `tuple[ModuleNode, ...]` | Resolved direct targets. |
+| `dependents(node_or_file_or_path)` | `tuple[ModuleNode, ...]` | Resolved direct importers. |
+| `cycles()` | `tuple[ImportCycle, ...]` | Deterministic statically proven cycles. |
+
+`ImportEdge` preserves the `AuthoredImport`, source location, resolved module name,
+`ImportResolution`, and optional target node. Graph identities include analyzer and
+source-kind ownership so they remain safe as additional analyzers gain graphs.
+
 ## `ctx.text`, `ctx.syntax`, `ctx.relations`
 
 Source text, opaque syntax identities, and syntax relationships for the current
@@ -107,6 +149,12 @@ declared message and remediation, are wired automatically. Omitted `message` and
 | `fault_at(location, message=None, remediation=None)` | A `Fault` from a `SyntaxHandle`, `SourceLocation`, or `SourceRange`. |
 | `fault_for(path, line, column, message=None, remediation=None)` | A `Fault` at an explicit location. |
 | `path_fault(path=None, message=None, remediation=None)` | A file-level `Fault` with no specific line. |
+
+During a project-rule invocation there is no current file, source, text, syntax, or
+file-fact object. `path_fault()` therefore requires an explicit project-relative
+path, and `fault_for()` requires an absolute path confined to the analyzed project.
+`fault_at()` accepts a `SourceLocation` or `SourceRange`; a bare `SyntaxHandle`
+cannot be resolved without a current file analysis.
 
 ## Position and roles
 
@@ -225,6 +273,21 @@ are frozen dataclasses; inspect exact fields with your editor's type information
 | `DiscardedProjectCallFact` | One discarded call resolvable within the project. |
 | `ProjectDependency` | One requester-to-path dependency observed by a query. |
 | `StaticReferenceFact` | One expression resolved to an absolute imported symbol. |
+
+**Subjects, project tree, and architecture graph**
+
+| Model | Describes |
+| --- | --- |
+| `File` | Immutable identity of one discovered source file. |
+| `Project` | Immutable identity of one analyzed project. |
+| `ProjectPath` | Normalized, confined, project-relative POSIX path. |
+| `ProjectTree` | Deterministic discovered paths, files, and positions. |
+| `FilePosition` | Complete analyzer-neutral layout position for one file. |
+| `ArchitectureGraph` | Resolved static project-import graph. |
+| `ModuleNode` | Discovered module identity and ownership. |
+| `AuthoredImport` | Import spelling before project resolution. |
+| `ImportEdge` | Authored import plus explicit resolution result. |
+| `ImportCycle` | One statically proven strongly connected component. |
 
 **Test facts**
 

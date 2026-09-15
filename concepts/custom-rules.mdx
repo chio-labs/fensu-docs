@@ -51,7 +51,7 @@ from __future__ import annotations
 
 import ast
 
-from fensu import Family, Fault, RuleContext, rule
+from fensu import Family, Fault, File, RuleContext, rule
 
 
 @rule(
@@ -61,7 +61,7 @@ from fensu import Family, Fault, RuleContext, rule
     message="GLOBAL_CLIENT hides ownership",
     remediation="Move the value to the module that owns and produces it.",
 )
-def no_global_client(*, module: ast.Module, ctx: RuleContext) -> list[Fault]:
+def no_global_client(*, file: File, ctx: RuleContext) -> list[Fault]:
     return [
         ctx.fault(node=node)
         for node in ctx.nodes(ast.Name)
@@ -132,18 +132,36 @@ conventions package), and because [selectors](/concepts/configuration#selection)
 are prefixes, namespaces nest: `X` selects every custom rule, `XD` everything
 under `XDB` and `XDJ`, `XDB` one namespace, `XDB001` one rule.
 
-### The check signature
+### Typed check subjects
 
-The signature is frozen. New capabilities arrive as new context methods, never as
-signature changes.
+Prefer one of the two typed callback shapes. A file rule runs once for each
+selected source file:
 
 ```python
-def check(*, module: ast.Module, ctx: RuleContext) -> list[Fault]: ...
+def check(*, file: File, ctx: RuleContext) -> list[Fault]: ...
 ```
 
-- `module` is the parsed `ast.Module` of the file being checked.
+- `file` is an immutable project-relative identity for the current source.
 - `ctx` is a [`RuleContext`](#the-rule-context).
 - The return value is a list of [`Fault`](#the-fault) objects.
+
+A project rule runs exactly once for the target, including when discovery finds no
+source files:
+
+```python
+from fensu import Project
+
+
+def check(*, project: Project, ctx: RuleContext) -> list[Fault]: ...
+```
+
+Project rules have no elected source anchor. They inspect `ctx.project.tree` and
+`ctx.graph`, and report against an explicit confined path with
+`ctx.path_fault(path=...)` or `ctx.fault_at(location=...)`.
+
+The legacy `(*, module: ast.Module, ctx: RuleContext)` callback remains supported
+for Python rules that need unrestricted Python AST access. New capabilities arrive
+through typed subjects and context rather than additional callback parameters.
 
 ### The `Fault`
 
@@ -185,11 +203,14 @@ override already applied. There is no string-keyed form, for the same reason
 ## The rule context
 
 `RuleContext` is a convenience toolbox, not a cage. Its supported analysis surface
-is split into five public, backend-neutral zones. You may still ignore them and walk
-`module` yourself when a rule needs unrestricted Python AST access.
+includes current-file facts, a deterministic project tree, a resolved architecture
+graph, source text, and backend-neutral syntax. Legacy Python callbacks may still
+walk `module` when a rule needs unrestricted Python AST access.
 
 ```python
 functions = ctx.facts.functions()                  # current-file semantic facts
+position = ctx.project.tree.position(file.path)    # typed layout facts
+imports = ctx.graph.imports(file)                  # resolved static imports
 analysis = ctx.project.analysis(                  # cross-file analysis
     requester=ctx.path,
     path=other_path,
@@ -199,9 +220,21 @@ handles = ctx.syntax.handles(kind="Call")         # opaque syntax identities
 parent = ctx.relations.parent(handles[0])          # syntax relationships
 ```
 
-Every `ctx.project` query records its input for cache invalidation. Pass the file
-whose result depends on the query as `requester`, normally `ctx.path`. Construct
-diagnostics through the context as well:
+`ctx.project.tree` contains only the authoritative discovered inventory. Paths are
+normalized project-relative POSIX `ProjectPath` values, and results are returned in
+deterministic order. Its `paths`, `files`, `children()`, `descendants()`, `glob()`,
+`files_under()`, and `position()` queries record the exact answer used by the active
+rule.
+
+For Python targets, `ctx.graph` exposes discovered module nodes, authored imports,
+explicit resolved or unresolved edges, direct dependencies and dependents, and
+deterministic static cycles. It resolves only imports that can be proven against
+the discovered project; external, ambiguous, and dynamic imports are never guessed.
+
+Every project-tree, graph, and `ctx.project` query records its input for cache
+invalidation. The active requester is inferred for typed rules; legacy explicit
+project queries may pass `requester=ctx.path`. Construct diagnostics through the
+context as well:
 
 ```python
 return [ctx.fault(node=node)]
@@ -423,6 +456,14 @@ A violation is a hard configuration error at startup naming the file, line, and
 reason. Unselected rules are never scanned. Repository-owned rule sources and
 helpers are content-hashed, so editing a rule or its helpers invalidates the cache
 correctly.
+
+File rules retain per-file cache subjects and execute independently. Project rules
+use a separate project cache subject with identity `.`; they are never attached to
+an arbitrary source file. A cached project rule may own diagnostics and exceptions
+at any confined repository-relative path. Query-specific tree and graph evidence
+is replayed before reuse: broad inventory queries invalidate broadly, while focused
+path, position, node, or edge queries can survive unrelated edits. Cached and
+uncached diagnostics are rendered identically.
 
 Resolved current values and complete option schemas participate in cache identity.
 Changing an override, default, type, choice, or bound invalidates affected cached
