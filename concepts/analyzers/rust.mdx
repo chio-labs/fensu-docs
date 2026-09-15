@@ -65,6 +65,74 @@ definition selectors. Inspect any rule and its effective settings with:
 fensu rule FPRSS010 --target rust
 ```
 
+## Custom Rust rules
+
+Custom Rust rules are authored in Python but run over immutable, serialized facts
+owned by Fensu. Declare Rust applicability explicitly and use a typed `File` or
+`Project` subject; raw `syn` and Cargo metadata objects are never exposed.
+
+```python
+from fensu import (
+    AnalyzerId,
+    Family,
+    Fault,
+    File,
+    RuleContext,
+    RustItemKind,
+    rule,
+)
+
+
+@rule(
+    code="XRS001",
+    family=Family.CUSTOM,
+    slug="legacy-service",
+    message="legacy service declaration",
+    analyzers=(AnalyzerId.RUST,),
+    cacheable=True,
+)
+def legacy_service(*, file: File, ctx: RuleContext) -> list[Fault]:
+    facts = ctx.rust.file(file)
+    if facts is None:
+        return []
+    return [
+        ctx.fault_at(location=item.location)
+        for item in facts.items
+        if item.kind is RustItemKind.STRUCT and item.name == "LegacyService"
+    ]
+```
+
+Configure it through the standard custom-rule and selector keys:
+
+```toml
+[targets.rust]
+analyzer = "rust"
+roots = ["src"]
+tests = []
+tooling = []
+rule_packs = ["rust"]
+rule_modules = ["rules.rust"]
+select = ["FPRS", "XRS001"]
+```
+
+`ctx.rust` includes Cargo workspace crates, targets and dependencies; selected Rust
+files and module identities; declarations for functions, structs, enums, traits,
+implementations, visibility and derives; parse failures; and statically provable
+`use` targets. Resolution remains explicit when a target is external, crate-local
+but not attributable to one file, or unresolved.
+
+Project rules use `Project` and run once for the Rust target. They can combine
+`ctx.project.tree` with `ctx.rust.crates` for workspace-wide dependency or layout
+policy. Typed `rule_options`, warning tiers, selector ignores, path ignores and exact
+exceptions use the same configuration as built-in rules.
+
+Fensu starts the Python host only when configured custom-rule sources have an active
+`X` selector that is not wholly covered by an ignore prefix. A Rust target with only
+native selectors remains native and Python-free. Cacheable custom rules retain
+separate file or project subjects and replay the tree or Rust-fact queries actually
+observed by each invocation. Fact schema, parser contract, runtime, rule package and
+typed options all participate in cache identity.
+
 ## Rule options
 
 Adjust a rule under the target's standard `rule_options` table:
@@ -144,7 +212,8 @@ layout checks for explicit subtrees while preserving per-file checks.
 ## Cargo metadata and caching
 
 Rust sources, Cargo manifests, an existing lockfile, and target configuration are
-cache inputs. Fensu uses locked dependency resolution when `Cargo.lock` exists.
+cache inputs. Selected custom-rule packages are cache inputs as well. Fensu uses
+locked dependency resolution when `Cargo.lock` exists.
 For a lock-free workspace, it reads declared dependencies without creating a
 lockfile.
 
