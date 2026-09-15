@@ -134,7 +134,7 @@ under `XDB` and `XDJ`, `XDB` one namespace, `XDB001` one rule.
 
 ### Typed check subjects
 
-Prefer one of the two typed callback shapes. A file rule runs once for each
+Prefer a typed callback shape. A file rule runs once for each
 selected source file:
 
 ```python
@@ -158,6 +158,22 @@ def check(*, project: Project, ctx: RuleContext) -> list[Fault]: ...
 Project rules have no elected source anchor. They inspect `ctx.project.tree` and
 `ctx.graph`, and report against an explicit confined path with
 `ctx.path_fault(path=...)` or `ctx.fault_at(location=...)`.
+
+A repository rule runs once only during an aggregate all-target check and queries
+explicit named target handles:
+
+```python
+from fensu import Repository
+
+
+def check(*, repository: Repository, ctx: RuleContext) -> list[Fault]: ...
+```
+
+Its analyzers declare the target capabilities it may read. Repository policy lives
+once in top-level `[repository_rules]`; `fensu check --target NAME` skips these
+rules rather than providing a partial target registry. See
+[Repository rules](/concepts/repository-rules) for configuration, target-local
+facts, diagnostic translation, and cache behavior.
 
 The legacy `(*, module: ast.Module, ctx: RuleContext)` callback remains supported
 for Python rules that need unrestricted Python AST access. New capabilities arrive
