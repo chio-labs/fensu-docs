@@ -39,6 +39,11 @@ integration-test targets automatically. You do not need to list crates unless yo
 deliberately want a closed inventory. Rust targets reject positional paths because
 Cargo owns target discovery.
 
+By default, Cargo-inferred crate source roots are also the ownership roots from
+which Fensu classifies domains. Set
+[`ownership_roots`](/concepts/configuration#ownership-roots) only when a crate's
+domains begin below additional structural grouping directories.
+
 ## What it checks
 
 The `rust` pack exposes all 117 implemented rules under `FPRS`. The rules cover:

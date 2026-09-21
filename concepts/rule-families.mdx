@@ -92,9 +92,13 @@ Representative rules:
 | `FFR204` | banned-generic-package-name | No `shared`, `common`, `util`, `misc`, and similar package names at any depth. |
 | `FFR301` | helpers-package-layout | `_helpers/` is flat or fully grouped into bounded buckets, never mixed. See [containers](/concepts/architecture-model#containers-flat-or-grouped). |
 | `FFR306` | top-level-domain-shape | A domain is a role leaf or a branch of named subdomains, never both. See [leaf or branch](/concepts/architecture-model#domains-leaf-or-branch). |
+| `FFR307` | top-level-direct-modules | Runtime roots and top-level domains do not contain ad hoc direct modules; deterministic root [public facades](/concepts/architecture-model#root-public-facades) are exempt. |
 | `FFR308` | shared-domain-prefix | Repeated first-token domain prefixes become an owning branch domain. See [shared prefixes](/concepts/architecture-model#shared-domain-prefixes). |
+| `FFR310` | public-facade-import-direction | Runtime code imports a facade's owning domain directly; facade imports are reserved for tests, tooling, and external consumers. |
 | `FFR401` | entry-module-shape | An entry file defines one public function and at most two private ones (a limit on functions in the file, not on what they may call). See [entry modules](/concepts/architecture-model#entry-modules). |
 | `FFR402` | init-module-empty | `__init__.py` is docstring-only. |
+| `FFR403` | no-reexport-shim | Internal modules do not exist only to re-export imports; deterministic root public facades are exempt. |
+| `FFR406` | public-surface-shape | A root `__init__.py` contains only a docstring, imports, and at most one `__all__` declaration. |
 | `FFR501` | classes-one-class-per-module | One class per module in `classes/`. |
 | `FFR601` | source-file-line-count | A file must not exceed the line-count threshold. |
 | `FFR701` | tooling-entrypoint-shape | A direct tooling script is a thin command adapter. |
@@ -105,6 +109,12 @@ Representative rules:
 FFR spans role-file content (`FFR0xx`), misplaced declarations (`FFR1xx`), naming
 (`FFR2xx`), package layout (`FFR3xx`), surface shape (`FFR4xx`), class and helper
 shape (`FFR5xx`), file size (`FFR6xx`), and tooling layout (`FFR7xx`).
+
+`FFR307`, `FFR403`, and `FFR310` work together for a recognized Python root
+facade. The first two permit the bounded facade shape; the third prevents product
+runtime code from depending inward on that outward-facing compatibility surface.
+See [Root public facades](/concepts/architecture-model#root-public-facades) for the
+recognized shapes and import direction.
 
 ## FFS: Shape
 

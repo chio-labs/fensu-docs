@@ -83,6 +83,10 @@ project, use `analyzer = "typescript"`, `rule_packs = ["typescript"]`, and the
 `FPTS` selector. For SvelteKit, the Svelte analyzer parses sources while the
 `sveltekit` pack is the single switch that activates SvelteKit policy.
 
+Domain ownership begins at each product root's `lib/` directory by default. Set
+[`ownership_roots`](/concepts/configuration#ownership-roots) when domains begin in
+several nested regions, such as `src/lib/sources/*` and `src/lib/runtime`.
+
 With several targets, `fensu check` evaluates all of them and renders one report.
 Use `fensu check --target web` to select one. Positional paths also require one
 selected target.
