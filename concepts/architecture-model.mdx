@@ -36,10 +36,39 @@ but unclassified" state.
 - `tests` defaults to `["tests"]`.
 - `tooling` defaults to empty.
 
-A file's **position** is computed relative to its matching root. For a root of
-`src/my_package`, the file `src/my_package/config/main/load.py` has relative parts
+A file's scan scope is computed from its matching product root. Its domain
+position is computed from the most-specific matching **ownership root**. By
+default those are the same in Python: for a root of `src/my_package`, the file
+`src/my_package/config/main/load.py` has ownership-relative parts
 `("config", "main", "load.py")`, from which Fensu derives its domain, subdomain,
 and role.
+
+## Ownership roots
+
+An ownership root is the directory immediately above a set of domains. It lets
+the physical repository tree contain structural groups without treating those
+groups as domain owners.
+
+```text
+src/my_package/                 # product root
+└── sources/                    # structural group
+    └── region_a/               # ownership root
+        ├── orders/             # domain
+        │   └── main/
+        └── partners/           # domain
+            └── importing/      # subdomain
+                └── main/
+```
+
+With `ownership_roots = ["src/my_package/sources/*"]`, `orders` and `partners`
+are domains and `importing` is a subdomain. `sources` and `region_a` remain
+structural: they cannot contain role files or role directories directly.
+
+Ownership roots may be declared at different depths. The deepest concrete match
+wins for each file, allowing one target to model several existing layout regions
+without inventing placeholder domains. Mirrored tests use the same production
+ownership boundary. See [Ownership roots](/concepts/configuration#ownership-roots)
+for patterns, analyzer defaults, and validation.
 
 ## Roles
 
@@ -87,8 +116,10 @@ accidental public surfaces.
 Fensu's default layout for product code is **domains built from roles**, not a
 flat top level.
 
-- The package root (for example `src/my_package/`) holds only its `__init__.py`
-  public surface and **domain** packages. No role files live at the root.
+- An ownership root (by default the package root, for example
+  `src/my_package/`) holds only its package protocol modules, deliberate public
+  facades where supported, and **domain** packages. No role files live at the
+  ownership root.
 - A **leaf domain** holds the actual work directly: `main/`, `_helpers/`,
   `classes/`, and the role files (`models.py`, `types.py`, `constants.py`,
   `exceptions.py`).
@@ -161,6 +192,47 @@ belong under `annotation/`.
 The rule applies when at least `min_shared_domain_prefix_packages` sibling domains
 share a prefix. The default is `2`; set it to `0` to disable the check. Directories
 without Python files do not count.
+
+## Root public facades
+
+A Python package may expose a deliberately small external API through a direct
+module at its runtime root, such as `src/my_package/orders_api.py`. Fensu recognizes
+this as a public facade only from its static shape; there is no naming allowlist
+or configuration switch.
+
+```python
+# src/my_package/orders_api.py
+from my_package.orders.models import Order
+
+__all__ = ("Order",)
+```
+
+A recognized facade has exactly one non-empty, duplicate-free, literal `__all__`.
+Every exported name must be backed by an import from within the same package or
+one of these bounded adapters around such an import:
+
+- a direct alias or re-export;
+- a one-statement forwarding function, including async forwarding;
+- an overload declaration paired with a supported implementation;
+- a constrained context-manager wrapper; or
+- a trivial subclass of one imported base.
+
+The module may contain imports and a docstring, but no mutable default, computed
+annotation, import-time call, arbitrary statement, or locally implemented
+behavior. If the complete file does not prove that shape, it remains an ordinary
+direct module and receives the normal layout or re-export diagnostics.
+
+Recognition changes three rules deliberately:
+
+- `FFR307` allows the otherwise-disallowed direct root module.
+- `FFR403` allows its deliberate re-export shape.
+- `FFR310` keeps the dependency direction one-way: product runtime modules must
+  import the owning domain directly, not route inward through the facade. Tests,
+  tooling, and external consumers may import the facade.
+
+This makes a facade an outward compatibility boundary rather than an internal
+service locator. Root `__init__.py` remains the separately checked package
+surface described by `FFR406`.
 
 ## Containers: flat or grouped
 

@@ -64,6 +64,7 @@ Use explicit targets for multiple projects or a Rust, TypeScript, or Svelte anal
 analyzer = "python"
 root = "."
 roots = ["src/acme"]
+ownership_roots = ["src/acme/sources/*", "src/acme/runtime"]
 tests = ["tests"]
 select = ["FF"]
 
@@ -115,6 +116,10 @@ silently dropped key is how a typo quietly disables a rule.
 - Explicit `targets` cannot be mixed with legacy top-level policy keys. They may be
   accompanied by top-level `repository_rules`.
 - `roots` entries must not be nested or overlapping.
+- `ownership_roots`, when present, must be a non-empty list of unique,
+  target-relative POSIX glob or brace patterns. Every declaration must select at
+  least one used directory beneath a product root, and equal-specificity matches
+  are rejected.
 - Every configured root path must exist on disk.
 - A path may not belong to two scopes, and two scopes may not claim the same
   import package name (for example a `roots` entry and a `tooling` entry both
@@ -144,6 +149,7 @@ silently dropped key is how a typo quietly disables a rule.
 | `targets` | table of named targets | none | Explicit analyzer projects; mutually exclusive with all flat keys. |
 | `repository_rules` | table | none | Aggregate custom-rule policy for explicit named targets. |
 | `roots` | list of strings | required in a flat config or target | Product code scopes. No nesting. |
+| `ownership_roots` | list of strings | analyzer-specific | Directories below which domains and subdomains are classified. |
 | `tests` | list of strings | `["tests"]` | Test scopes. |
 | `test_scopes` | list of strings | `["unit", "integration", "e2e"]` | Directory names allowed directly under a test root. |
 | `tooling` | list of strings | `[]` | Dev tooling scopes. |
@@ -163,6 +169,66 @@ silently dropped key is how a typo quietly disables a rule.
 | `skills` | table | inferred identity | Generated agent-skill settings. |
 | `roles` | table of tables | none | Per-role threshold overrides. |
 | `contracts` | table | ten shipped patterns | Name-glob to behavior contracts. |
+
+## Ownership roots
+
+`roots` answers **which product code Fensu scans**. `ownership_roots` answers
+**where domain ownership begins inside that code**. Use it when one source tree
+contains structural grouping directories and its domains begin at different
+physical depths:
+
+```toml
+[targets.app]
+analyzer = "python"
+roots = ["src/example"]
+ownership_roots = [
+  "src/example/sources/*",
+  "src/example/runtime",
+]
+```
+
+```text
+src/example/
+├── sources/                    # structural group
+│   ├── region_a/               # ownership root
+│   │   ├── orders/main/process.py
+│   │   └── partners/importing/main/load.py
+│   └── region_b/               # ownership root
+│       └── inventory/main/refresh.py
+└── runtime/                    # ownership root
+    ├── scraping/main/collect.py
+    └── observability/main/report.py
+```
+
+Here `orders`, `partners`, `inventory`, `scraping`, and `observability` are
+domains. `importing` is a subdomain. `sources/`, `region_a/`, and `region_b/`
+organize the tree but are not domains themselves.
+
+Patterns are relative to the target's `root`. They support `*`, a standalone
+`**` path segment, and deterministic brace alternatives such as
+`src/example/{sources/*,runtime}`. Each matching directory becomes one concrete
+ownership root. When roots overlap, the deepest concrete root applies to a file;
+when declarations select the same directory, the most-specific pattern owns it.
+Equal-specificity declarations fail instead of depending on declaration order.
+
+Structural directories above and including an ownership root cannot contain role
+files or role directories directly. A root also cannot cross `main/`,
+`_helpers/`, or `classes/`. Mirrored tests retain the complete production path,
+so they inherit the ownership root of the source they cover.
+
+When `ownership_roots` is omitted, defaults are analyzer-specific:
+
+| Analyzer | Default ownership roots |
+| --- | --- |
+| Python | Each configured product `root`. |
+| TypeScript and Svelte | The `lib/` directory below each configured product root. |
+| Rust | Cargo-inferred crate source roots. |
+
+Configuration fails closed if a declaration matches no directory, resolves
+outside a product root, contains no analyzable source, crosses a role directory,
+is shadowed by a more-specific declaration everywhere, or resolves to a concrete
+root that no source uses. This keeps a stale pattern from silently changing the
+architecture Fensu evaluates.
 
 ## Selection
 
