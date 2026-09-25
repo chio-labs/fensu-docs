@@ -6,7 +6,9 @@ description: "Report ranked clusters of duplicated functions as advisory review 
 `fensu dupes` reports concrete duplicated code: ranked clusters of exact, renamed,
 and near-miss function-level copies in Python, Rust, TypeScript, JavaScript, and
 Svelte. It is an advisory review aid, not a gate. Where [`fensu check`](/cli/check)
-enforces the policy, `dupes` points at copies worth a second look.
+enforces the policy, `dupes` points at copies worth a second look. For why
+duplication counts as architectural drift, and a worked example, see
+[Duplicated code](/concepts/duplicated-code).
 
 ```bash
 fensu dupes [--json] [--top TOP] [--min-similarity MIN_SIMILARITY]
@@ -395,6 +397,9 @@ Generated [agent skills](/cli/skills) include the same guidance, so agents run
 ## Related
 
 <CardGroup cols={2}>
+  <Card title="Duplicated code" icon="clone" href="/concepts/duplicated-code">
+    Why copies are drift, with a worked consolidation example.
+  </Card>
   <Card title="fensu check" icon="list-check" href="/cli/check">
     The blocking counterpart that enforces the configured policy.
   </Card>

@@ -96,3 +96,39 @@ Supporting configuration keeps everything else visible while you decide:
 Every deviation lives in [configuration](/concepts/configuration) or a custom rule,
 where a reviewer can see it, rather than scattered through the source. See
 [Philosophy](/philosophy) for why that matters.
+
+## Duplicated code in an existing repository
+
+[`fensu dupes`](/cli/dupes) is advisory, so you can add it on day one without
+changing what CI blocks. An established repository usually has a backlog of
+copies. Treat that backlog as a record of past drift, not as a to-do list that
+must reach zero.
+
+1. **Take a baseline.** Run the report once and keep the output with the
+   adoption notes:
+
+   ```bash
+   fensu dupes --top 50
+   ```
+
+2. **Triage the top clusters.** Sort each one into *genuine* (one concept with
+   no owner) or *intentional* (a deliberate mirror or a contract-forced copy).
+   Use `--diff` to find copies that have already diverged. A fix present in only
+   one copy is a bug report, not a refactor.
+3. **Record the diagnosis** for each genuine cluster before consolidating it,
+   in an issue or the adoption notes. Merging the copies removes the evidence.
+4. **Record intentional copies** in [`[dupes]`](/cli/dupes#configuration): an
+   `allowlist` entry for mirrors or a `contract_exemptions` entry for forced
+   methods, each with a `reason`.
+5. **Consolidate in focused batches.** Take one cluster or one area at a time,
+   add characterization tests first when coverage is weak, and let
+   [`fensu check`](/cli/check) decide where the shared owner lives.
+6. **Catch new duplication in review.** Run the report on every branch:
+
+   ```bash
+   fensu dupes --since origin/main --diff
+   ```
+
+Do not chase zero. The goal is that new duplication gets noticed and old
+duplication gets a recorded decision. See
+[Duplicated code](/concepts/duplicated-code) for a worked example.
