@@ -109,6 +109,19 @@ call flow.
 It resolves calls it can prove and marks dynamic seams as unresolved rather than
 guessing.
 
+## Beyond faults: duplicated code
+
+Some drift breaks no rule. When several modules each grow their own copy of one
+behaviour, every copy can sit in a valid place with a valid shape, and the copies
+still drift apart as fixes land in only one of them.
+[`fensu dupes`](/cli/dupes) reports those copies as ranked clusters, with the
+lines where they disagree. It is advisory: it never fails a build, and its
+findings never need to reach zero.
+
+<Card title="Duplicated code" icon="clone" href="/concepts/duplicated-code">
+  Why a copy is architectural drift, and how to diagnose and consolidate it.
+</Card>
+
 ## Keeping agents on the rails
 
 Increasingly, the code that drifts is the code an agent wrote. Models are good at

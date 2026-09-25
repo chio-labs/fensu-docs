@@ -71,6 +71,11 @@ the whole idea.
 So when a rule flags your code, it is a claim it can stand behind, which also makes
 it a concrete thing to argue with if it is wrong.
 
+The same standard is why duplicated code is reported, not enforced. Fensu can
+prove deterministically that two functions match. It cannot prove that they
+should be one, so [`fensu dupes`](/concepts/duplicated-code) presents the copies
+as evidence and never fails a build.
+
 ## Not a style tool
 
 Fensu checks how a codebase is *organized*, not how it is *formatted*. Line length,

@@ -90,6 +90,18 @@ written to be read at the moment of violation, by a person or an agent, so the f
 is clear without opening the docs. Look up any code in full with
 [`fensu rule <CODE>`](/cli/rule).
 
+## 4. Optional: look for duplicated code
+
+`fensu check` cannot see that two valid functions are the same logic. Run the
+advisory duplicated-code report to find copies that may have drifted apart:
+
+```bash
+fensu dupes
+```
+
+It exits `0` whatever it finds, so there is nothing to fix before you move on.
+See [Duplicated code](/concepts/duplicated-code) for how to read the clusters.
+
 ## Next steps
 
 <CardGroup cols={2}>
