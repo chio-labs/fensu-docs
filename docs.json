@@ -63,6 +63,7 @@
         "pages": [
           "cli/index",
           "cli/check",
+          "cli/dupes",
           "cli/init",
           "cli/map",
           "cli/rule",
